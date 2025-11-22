@@ -6,7 +6,8 @@ import time
 # 🔑 シークレットキー設定
 # ==========================================
 # ↓ クォーテーション "" で囲まれているか確認してください！
-TEAM_SECRET_KEY = "ARHXCWTVFU54ITHIXS4Q76SVCDFLC5TU" 
+# Streamlitの金庫からキーを取り出す命令
+TEAM_SECRET_KEY = st.secrets["TEAM_SECRET_KEY"]
 # ==========================================
 
 st.set_page_config(page_title="Flux Authenticator", page_icon="💎", layout="wide")
