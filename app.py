@@ -2,7 +2,6 @@ import streamlit as st
 import pyotp
 import time
 import base64
-import os
 
 # ==========================================
 # ⚙️ SETTINGS
@@ -13,140 +12,52 @@ except FileNotFoundError:
     TEAM_SECRET_KEY = "ARHXCWTVFU54ITHIXS4Q76SVCDFLC5TU"
 
 # ==========================================
-# 🖼️ IMAGE LOADER (Base64 Encoder)
+# 💎 SVG ICONS (埋め込み画像データ)
 # ==========================================
-def get_image_base64(path):
-    """ローカル画像をBase64文字列に変換してHTMLに埋め込めるようにする関数"""
-    if not os.path.exists(path):
-        # ファイルがない場合のダミー（赤い四角）
-        return "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiBmaWxsPSIjZmY0NTNhIi8+PC9zdmc+"
-    
-    with open(path, "rb") as img_file:
-        encoded = base64.b64encode(img_file.read()).decode()
-    
-    # 拡張子に応じてMIMEタイプを判定
-    ext = path.split('.')[-1].lower()
-    mime_type = "image/png" if ext == "png" else "image/jpeg"
-    
-    return f"data:{mime_type};base64,{encoded}"
+# 画像ファイルの代わりに、美しいベクターアイコンを直接コードに埋め込みました。
+# これにより「ファイルが見つからない」エラーが物理的に発生しなくなります。
+
+ICON_MATH = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>"""
+ICON_GRAPH = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>"""
+ICON_CODE = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>"""
+ICON_ERROR = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>"""
+ICON_DIMENSION = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>"""
+ICON_POLISH = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>"""
 
 # ==========================================
-# 🎨 CSS STYLES (Apple Pro Design System)
+# 🎨 CSS STYLES
 # ==========================================
+# 改行を削除して1行の文字列として定義（インデント崩れ防止）
 STYLES = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=SF+Pro+Display&display=swap');
-
-/* --- 1. Global Reset --- */
-.stApp {
-    background-color: #000000;
-    background: #050507; /* iPhone Pro Black */
-    color: #f5f5f7;
-    font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Inter", sans-serif;
-    overflow-x: hidden;
-}
-header, footer {visibility: hidden;}
-.block-container { 
-    padding-top: 4rem; 
-    padding-bottom: 10rem; 
-    max-width: 1000px; 
-}
-
-/* --- 2. Typography --- */
-.text-headline {
-    font-size: 56px; line-height: 1.07; font-weight: 600;
-    letter-spacing: -0.005em; margin-bottom: 20px;
-}
-.text-subhead {
-    font-size: 28px; line-height: 1.14; font-weight: 600;
-    color: #86868b; margin-bottom: 50px;
-}
-
-/* --- 3. Hero Section --- */
-.hero-section {
-    text-align: center; margin-bottom: 150px; padding: 60px 20px;
-    animation: fadeIn 1.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-}
-.otp-display {
-    font-size: 160px; line-height: 1; font-weight: 700; letter-spacing: -6px;
-    font-variant-numeric: tabular-nums; margin: 20px 0;
-    background: linear-gradient(135deg, #fff 0%, #d0d0d0 40%, #8a8a8e 100%);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-    filter: drop-shadow(0 0 30px rgba(255,255,255,0.1));
-}
-.otp-label {
-    font-size: 14px; font-weight: 600; letter-spacing: 0.2em;
-    text-transform: uppercase; color: #d59464; margin-bottom: 10px;
-}
-.progress-container {
-    width: 240px; height: 4px; background: #333;
-    border-radius: 2px; margin: 40px auto; overflow: hidden;
-}
-.progress-fill {
-    height: 100%; background: #fff;
-    border-radius: 2px; transition: width 1s linear;
-}
+.stApp { background-color: #000; background: #050507; color: #f5f5f7; font-family: "SF Pro Display", sans-serif; overflow-x: hidden; }
+header, footer { visibility: hidden; }
+.block-container { padding-top: 4rem; padding-bottom: 10rem; max-width: 1000px; }
+.hero-section { text-align: center; margin-bottom: 150px; padding: 60px 20px; animation: fadeIn 1.5s ease forwards; }
+.otp-display { font-size: 160px; font-weight: 700; letter-spacing: -6px; margin: 20px 0; background: linear-gradient(135deg, #fff 0%, #8a8a8e 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.otp-label { font-size: 14px; font-weight: 600; letter-spacing: 0.2em; color: #d59464; margin-bottom: 10px; }
+.progress-container { width: 240px; height: 4px; background: #333; margin: 40px auto; border-radius: 2px; overflow: hidden; }
+.progress-fill { height: 100%; background: #fff; transition: width 1s linear; }
 .warning { background: #ff453a !important; }
-
-/* --- 4. Bento Grid & Images --- */
-.section-header {
-    margin-top: 100px; margin-bottom: 60px; padding: 0 20px;
-    opacity: 0; transform: translateY(50px);
-    transition: all 1.0s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.bento-grid {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-    gap: 24px; padding: 0 20px;
-}
-.bento-card {
-    background: #101010; border-radius: 30px; padding: 40px 36px;
-    height: 500px; display: flex; flex-direction: column;
-    justify-content: space-between; border: 1px solid #1d1d1f;
-    overflow: hidden; position: relative;
-    opacity: 0; transform: translateY(50px);
-    transition: all 1.0s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.bento-card:hover { transform: scale(1.02); background: #151515; }
-
-/* 画像コンテナのスタイル調整 */
-.card-icon-container {
-    width: 80px;  /* アイコンの枠サイズ */
-    height: 80px;
-    margin-bottom: 25px;
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-}
-/* 実際の画像のスタイル */
-.card-image {
-    width: auto;
-    height: 100%; /* 高さを枠に合わせる */
-    max-width: 100%; /* 幅ははみ出さない */
-    object-fit: contain; /* アスペクト比を維持して収める */
-    border-radius: 12px; /* 少し角丸に */
-    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2)); /* 僅かな影で浮遊感 */
-}
-
-.card-title {
-    font-size: 32px; font-weight: 700; line-height: 1.1;
-    color: #f5f5f7; margin-bottom: 12px;
-}
-.card-desc {
-    font-size: 19px; line-height: 1.4; color: #86868b; font-weight: 500;
-}
-.card-cmd {
-    margin-top: auto; font-family: 'SF Mono', monospace; font-size: 13px;
-    color: #fff; background: rgba(255,255,255,0.1);
-    padding: 16px; border-radius: 16px; backdrop-filter: blur(10px);
-}
-
+.section-header { margin-top: 100px; margin-bottom: 60px; padding: 0 20px; opacity: 0; transform: translateY(50px); transition: all 1s ease; }
+.text-headline { font-size: 56px; font-weight: 600; margin-bottom: 20px; }
+.text-subhead { font-size: 28px; color: #86868b; }
+.bento-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; padding: 0 20px; }
+.bento-card { background: #101010; border-radius: 30px; padding: 40px 36px; height: 450px; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid #1d1d1f; opacity: 0; transform: translateY(50px); transition: all 1s ease; }
+.bento-card:hover { transform: scale(1.02); background: #151515; border-color: #333; }
+.card-icon-box { width: 60px; height: 60px; margin-bottom: 25px; background: rgba(255,255,255,0.05); border-radius: 16px; display: flex; align-items: center; justify-content: center; }
+.card-icon-box svg { width: 32px; height: 32px; }
+.card-title { font-size: 28px; font-weight: 700; color: #f5f5f7; margin-bottom: 12px; }
+.card-desc { font-size: 17px; line-height: 1.5; color: #86868b; }
+.card-cmd { margin-top: auto; font-family: monospace; font-size: 13px; color: #fff; background: rgba(255,255,255,0.1); padding: 16px; border-radius: 16px; }
 .is-visible { opacity: 1 !important; transform: translateY(0) !important; }
 @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
 </style>
 """
 
 # ==========================================
-# 📜 JAVASCRIPT (Scroll Observer)
+# 📜 JAVASCRIPT
 # ==========================================
 SCROLL_JS = """
 <script>
@@ -157,7 +68,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 entry.target.classList.add('is-visible');
             }
         });
-    }, { threshold: 0.15 });
+    }, { threshold: 0.1 });
     const targets = document.querySelectorAll('.section-header, .bento-card');
     targets.forEach((el) => observer.observe(el));
 });
@@ -165,69 +76,33 @@ document.addEventListener('DOMContentLoaded', function () {
 """
 
 # ==========================================
-# 🧱 HTML COMPONENTS
+# 🧱 COMPONENTS
 # ==========================================
-def create_bento_card(image_path, title, desc, cmd):
-    # 画像をBase64文字列に変換
-    img_src = get_image_base64(image_path)
-    
-    return f"""
-    <div class="bento-card">
-        <div>
-            <div class="card-icon-container">
-                <img src="{img_src}" class="card-image" alt="icon">
-            </div>
-            <div class="card-title">{title}</div>
-            <div class="card-desc">{desc}</div>
-        </div>
-        <div class="card-cmd">"{cmd}"</div>
-    </div>
-    """
+def create_card(svg_icon, title, desc, cmd):
+    # 改行コードを一切含まない1行のHTML文字列を生成
+    return f"""<div class="bento-card"><div><div class="card-icon-box">{svg_icon}</div><div class="card-title">{title}</div><div class="card-desc">{desc}</div></div><div class="card-cmd">"{cmd}"</div></div>"""
 
 def get_static_content():
-    # ここで画像ファイル名を指定します
+    # カード生成（SVGアイコンを使用）
     cards = [
-        # LaTeXロゴ
-        create_bento_card("icon_latex.png", "Math Vision.", "板書の数式を、一瞬でLaTeXに。", "この画像をLaTeXにして"),
-        # グラフの画像
-        create_bento_card("icon_graph.png", "Graph Reverse.", "論文のグラフから、データを復元。", "このグラフをCSVにして"),
-        # Javaコードの画像（Polyglotの象徴として）
-        create_bento_card("icon_code.png", "Polyglot.", "MATLABを、Pythonへ。", "Pythonに書き換えて"),
-        # ダッシュボード/エラーの画像
-        create_bento_card("icon_error.png", "Error Analysis.", "誤差伝播を、自動計算。", "誤差伝播を計算して"),
-        # 図形の画像（次元解析）
-        create_bento_card("icon_dimension.png", "Dimensions.", "物理式の整合性を、検算。", "次元解析をして"),
-        # フローチャートの画像（推敲プロセス）
-        create_bento_card("icon_polish.png", "Refine.", "文章を、論文のクオリティへ。", "学術的にリライトして")
+        create_card(ICON_MATH, "Math Vision", "板書の数式を、一瞬でLaTeXに。", "この画像をLaTeXにして"),
+        create_card(ICON_GRAPH, "Graph Reverse", "論文のグラフから、データを復元。", "このグラフをCSVにして"),
+        create_bento_card_polyglot(ICON_CODE, "Polyglot", "MATLABを、Pythonへ。", "Pythonに書き換えて"),
+        create_card(ICON_ERROR, "Error Analysis", "誤差伝播を、自動計算。", "誤差伝播を計算して"),
+        create_card(ICON_DIMENSION, "Dimensions", "物理式の整合性を、検算。", "次元解析をして"),
+        create_card(ICON_POLISH, "Refine", "文章を、論文のクオリティへ。", "学術的にリライトして")
     ]
+    # 特殊処理用（関数名を統一するためダミーラッパー）
+    def create_bento_card_polyglot(i, t, d, c): return create_card(i, t, d, c)
     
-    return f"""
-    <div class="section-header">
-        <div class="text-headline">Engineering Intelligence.</div>
-        <div class="text-subhead">機械工学科のための<br>究極のサバイバルツール。</div>
-    </div>
-    <div class="bento-grid">
-        {"".join(cards)}
-    </div>
-    <div style="text-align:center; padding: 100px 0; color: #444; font-size: 12px;">
-        Designed in Yokohama.
-    </div>
-    {SCROLL_JS}
-    """
+    # グリッド部分のHTMLも1行に圧縮して結合
+    cards_html = "".join(cards)
+    
+    return f"""<div class="section-header"><div class="text-headline">Engineering Intelligence.</div><div class="text-subhead">機械工学科のための<br>究極のサバイバルツール。</div></div><div class="bento-grid">{cards_html}</div><div style="text-align:center; padding: 100px 0; color: #444; font-size: 12px;">Designed in Yokohama.</div>{SCROLL_JS}"""
 
 def get_hero_content(code, progress, bar_class, remaining):
-    return f"""
-    <div class="hero-section">
-        <div class="otp-label">TITANIUM SECURITY</div>
-        <div class="otp-display">{code}</div>
-        <div class="progress-container">
-            <div class="progress-fill {bar_class}" style="width: {progress}%;"></div>
-        </div>
-        <div style="color: #666; font-size: 14px; font-weight: 500;">
-            Updating in <span style="color: #fff;">{remaining}</span>s
-        </div>
-    </div>
-    """
+    # ヒーローセクションも1行に圧縮
+    return f"""<div class="hero-section"><div class="otp-label">TITANIUM SECURITY</div><div class="otp-display">{code}</div><div class="progress-container"><div class="progress-fill {bar_class}" style="width: {progress}%;"></div></div><div style="color: #666; font-size: 14px; font-weight: 500;">Updating in <span style="color: #fff;">{remaining}</span>s</div></div>"""
 
 # ==========================================
 # 🚀 MAIN APP
@@ -241,7 +116,6 @@ def main():
         return
 
     hero_placeholder = st.empty()
-    # 静的コンテンツ（画像入りグリッド）を描画
     st.markdown(get_static_content(), unsafe_allow_html=True)
 
     try:
