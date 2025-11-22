@@ -1,9 +1,11 @@
 import streamlit as st
 import pyotp
 import time
+import base64
+import os
 
 # ==========================================
-# 🛠️ 1. 設定 & シークレット取得
+# ⚙️ SETTINGS
 # ==========================================
 try:
     TEAM_SECRET_KEY = st.secrets["TEAM_SECRET_KEY"]
@@ -11,292 +13,250 @@ except FileNotFoundError:
     TEAM_SECRET_KEY = "ARHXCWTVFU54ITHIXS4Q76SVCDFLC5TU"
 
 # ==========================================
-# 🎨 2. デザイン定義 (ここをロジックから分離！)
+# 🖼️ IMAGE LOADER (Base64 Encoder)
 # ==========================================
+def get_image_base64(path):
+    """ローカル画像をBase64文字列に変換してHTMLに埋め込めるようにする関数"""
+    if not os.path.exists(path):
+        # ファイルがない場合のダミー（赤い四角）
+        return "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiBmaWxsPSIjZmY0NTNhIi8+PC9zdmc+"
+    
+    with open(path, "rb") as img_file:
+        encoded = base64.b64encode(img_file.read()).decode()
+    
+    # 拡張子に応じてMIMEタイプを判定
+    ext = path.split('.')[-1].lower()
+    mime_type = "image/png" if ext == "png" else "image/jpeg"
+    
+    return f"data:{mime_type};base64,{encoded}"
 
-# CSSは固定なのでここに置きます
+# ==========================================
+# 🎨 CSS STYLES (Apple Pro Design System)
+# ==========================================
 STYLES = """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=SF+Pro+Display&display=swap');
 
+/* --- 1. Global Reset --- */
 .stApp {
-    background-color: #000;
-    background: radial-gradient(circle at 50% 0%, #1c1c1e 0%, #000000 85%);
-    font-family: 'Inter', sans-serif;
+    background-color: #000000;
+    background: #050507; /* iPhone Pro Black */
     color: #f5f5f7;
+    font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Inter", sans-serif;
+    overflow-x: hidden;
 }
 header, footer {visibility: hidden;}
-.block-container { padding-top: 2rem; max-width: 1200px; }
-
-@keyframes fadeInUp {
-    from { opacity: 0; transform: translateY(30px); }
-    to { opacity: 1; transform: translateY(0); }
+.block-container { 
+    padding-top: 4rem; 
+    padding-bottom: 10rem; 
+    max-width: 1000px; 
 }
 
-.hero-container {
-    text-align: center;
-    margin-bottom: 80px;
-    padding: 60px 40px;
-    background: rgba(255, 255, 255, 0.03);
-    backdrop-filter: blur(40px);
-    -webkit-backdrop-filter: blur(40px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 32px;
-    box-shadow: 0 30px 60px rgba(0,0,0,0.7);
-    animation: fadeInUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+/* --- 2. Typography --- */
+.text-headline {
+    font-size: 56px; line-height: 1.07; font-weight: 600;
+    letter-spacing: -0.005em; margin-bottom: 20px;
+}
+.text-subhead {
+    font-size: 28px; line-height: 1.14; font-weight: 600;
+    color: #86868b; margin-bottom: 50px;
 }
 
-.hero-label {
-    font-size: 14px;
-    font-weight: 600;
-    letter-spacing: 4px;
-    text-transform: uppercase;
-    color: #86868b;
-    margin-bottom: 20px;
+/* --- 3. Hero Section --- */
+.hero-section {
+    text-align: center; margin-bottom: 150px; padding: 60px 20px;
+    animation: fadeIn 1.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
+.otp-display {
+    font-size: 160px; line-height: 1; font-weight: 700; letter-spacing: -6px;
+    font-variant-numeric: tabular-nums; margin: 20px 0;
+    background: linear-gradient(135deg, #fff 0%, #d0d0d0 40%, #8a8a8e 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 30px rgba(255,255,255,0.1));
+}
+.otp-label {
+    font-size: 14px; font-weight: 600; letter-spacing: 0.2em;
+    text-transform: uppercase; color: #d59464; margin-bottom: 10px;
+}
+.progress-container {
+    width: 240px; height: 4px; background: #333;
+    border-radius: 2px; margin: 40px auto; overflow: hidden;
+}
+.progress-fill {
+    height: 100%; background: #fff;
+    border-radius: 2px; transition: width 1s linear;
+}
+.warning { background: #ff453a !important; }
 
-.hero-code {
-    font-size: 9rem;
-    font-weight: 800;
-    letter-spacing: -4px;
-    line-height: 1;
-    margin: 20px 0;
-    background: linear-gradient(180deg, #ffffff 10%, #555555 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    font-variant-numeric: tabular-nums;
-    filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5));
+/* --- 4. Bento Grid & Images --- */
+.section-header {
+    margin-top: 100px; margin-bottom: 60px; padding: 0 20px;
+    opacity: 0; transform: translateY(50px);
+    transition: all 1.0s cubic-bezier(0.16, 1, 0.3, 1);
 }
-
-.progress-wrapper {
-    width: 50%;
-    height: 8px;
-    background: #222;
-    border-radius: 100px;
-    margin: 0 auto 25px auto;
-    overflow: hidden;
-    border: 1px solid #333;
-}
-
-.progress-bar {
-    height: 100%;
-    background: #fff;
-    border-radius: 100px;
-    transition: width 1s linear;
-    box-shadow: 0 0 20px rgba(255,255,255,0.5);
-}
-.warning-mode {
-    background: #ff3b30 !important;
-    box-shadow: 0 0 25px rgba(255, 59, 48, 0.8);
-}
-
-.grid-header {
-    font-size: 3.5rem;
-    font-weight: 700;
-    margin-bottom: 10px;
-    text-align: left;
-    color: #f5f5f7;
-    letter-spacing: -1px;
-    opacity: 0;
-    animation: fadeInUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) 0.2s forwards;
-}
-.grid-sub {
-    font-size: 1.3rem;
-    color: #86868b;
-    font-weight: 400;
-    margin-bottom: 50px;
-    max-width: 600px;
-    line-height: 1.5;
-    opacity: 0;
-    animation: fadeInUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) 0.3s forwards;
-}
-
 .bento-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
-    gap: 25px;
-    padding-bottom: 100px;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 24px; padding: 0 20px;
 }
+.bento-card {
+    background: #101010; border-radius: 30px; padding: 40px 36px;
+    height: 500px; display: flex; flex-direction: column;
+    justify-content: space-between; border: 1px solid #1d1d1f;
+    overflow: hidden; position: relative;
+    opacity: 0; transform: translateY(50px);
+    transition: all 1.0s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.bento-card:hover { transform: scale(1.02); background: #151515; }
 
-.feature-card {
-    background: #151516;
-    border-radius: 28px;
-    padding: 35px;
-    height: 100%;
-    border: 1px solid rgba(255,255,255,0.05);
+/* 画像コンテナのスタイル調整 */
+.card-icon-container {
+    width: 80px;  /* アイコンの枠サイズ */
+    height: 80px;
+    margin-bottom: 25px;
     display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
-    opacity: 0;
-    animation: fadeInUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    align-items: center;
+    justify-content: flex-start;
 }
-.delay-1 { animation-delay: 0.4s; }
-.delay-2 { animation-delay: 0.5s; }
-.delay-3 { animation-delay: 0.6s; }
-.delay-4 { animation-delay: 0.7s; }
-.delay-5 { animation-delay: 0.8s; }
-.delay-6 { animation-delay: 0.9s; }
-
-.feature-card:hover {
-    transform: scale(1.02) translateY(-5px);
-    background: #1c1c1e;
-    border-color: rgba(255,255,255,0.3);
-    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+/* 実際の画像のスタイル */
+.card-image {
+    width: auto;
+    height: 100%; /* 高さを枠に合わせる */
+    max-width: 100%; /* 幅ははみ出さない */
+    object-fit: contain; /* アスペクト比を維持して収める */
+    border-radius: 12px; /* 少し角丸に */
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2)); /* 僅かな影で浮遊感 */
 }
 
-.feature-icon { 
-    font-size: 2.5rem; 
-    margin-bottom: 20px; 
-    background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.02));
-    width: 64px; height: 64px;
-    display: flex; align-items: center; justify-content: center;
-    border-radius: 18px;
-    border: 1px solid rgba(255,255,255,0.05);
+.card-title {
+    font-size: 32px; font-weight: 700; line-height: 1.1;
+    color: #f5f5f7; margin-bottom: 12px;
 }
-.feature-title { font-weight: 700; font-size: 1.5rem; color: #fff; margin-bottom: 12px; }
-.feature-desc { font-size: 1rem; color: #a1a1a6; line-height: 1.6; margin-bottom: 20px; }
-.use-case {
-    font-size: 0.85rem;
-    color: #6e6e73;
-    margin-bottom: 15px;
-    padding-left: 10px;
-    border-left: 2px solid #333;
+.card-desc {
+    font-size: 19px; line-height: 1.4; color: #86868b; font-weight: 500;
 }
-.feature-cmd {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.85rem;
-    color: #64d2ff;
-    background: rgba(100, 210, 255, 0.1);
-    padding: 12px 15px;
-    border-radius: 12px;
-    border: 1px solid rgba(100, 210, 255, 0.15);
-    word-break: break-all;
+.card-cmd {
+    margin-top: auto; font-family: 'SF Mono', monospace; font-size: 13px;
+    color: #fff; background: rgba(255,255,255,0.1);
+    padding: 16px; border-radius: 16px; backdrop-filter: blur(10px);
 }
+
+.is-visible { opacity: 1 !important; transform: translateY(0) !important; }
+@keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
 </style>
 """
 
-# HTML構造を関数として完全に独立させます（インデント問題の抜本解決）
-def render_dashboard(code_str, percent, bar_cls, remaining):
-    return f"""
-<div class="hero-container">
-    <div class="hero-label">Titanium Security Layer</div>
-    <div class="hero-code">{code_str}</div>
-    <div class="progress-wrapper">
-        <div class="{bar_cls}" style="width: {percent}%;"></div>
-    </div>
-    <div style="color: #86868b; font-size: 0.9rem; font-weight: 500; letter-spacing: 0.5px;">
-        SYNCING WITH SECURE ENCLAVE: <span style="color:#fff;">{remaining}s</span>
-    </div>
-</div>
-
-<div>
-    <div class="grid-header">Engineering Intelligence.</div>
-    <div class="grid-sub">
-        機械工学科の課題・実験・研究をハックする6つのAIプロンプト。<br>
-        授業で使える具体的なユースケースをプリセット。
-    </div>
-</div>
-
-<div class="bento-grid">
-    <div class="feature-card delay-1">
-        <div>
-            <div class="feature-icon">📸</div>
-            <div class="feature-title">Math Vision to LaTeX</div>
-            <div class="feature-desc">板書や教科書の数式を撮影してアップロード。一瞬でレポート用LaTeXコードに変換。</div>
-            <div class="use-case">Use for: 流体力学のナビエ・ストークス方程式、熱力学の偏微分</div>
-        </div>
-        <div class="feature-cmd">"この画像を解析して、LaTeXコードを出力して"</div>
-    </div>
-    
-    <div class="feature-card delay-2">
-        <div>
-            <div class="feature-icon">📊</div>
-            <div class="feature-title">Graph Reverse Eng.</div>
-            <div class="feature-desc">論文のグラフ画像を解析し、元のプロットデータ（CSV数値）を復元・抽出します。</div>
-            <div class="use-case">Use for: 材料力学のS-N曲線比較、エンジンのトルク線図</div>
-        </div>
-        <div class="feature-cmd">"このグラフのプロットデータをCSVで出力して"</div>
-    </div>
-    
-    <div class="feature-card delay-3">
-        <div>
-            <div class="feature-icon">🐍</div>
-            <div class="feature-title">Polyglot Converter</div>
-            <div class="feature-desc">授業のMATLABコードをPython (NumPy/SciPy) に完全移植。CやFortranも対応。</div>
-            <div class="use-case">Use for: 制御工学演習、数値解析の課題</div>
-        </div>
-        <div class="feature-cmd">"このMATLABコードをPythonに変換して"</div>
-    </div>
-
-    <div class="feature-card delay-4">
-        <div>
-            <div class="feature-icon">🧪</div>
-            <div class="feature-title">Error Propagation</div>
-            <div class="feature-desc">実験レポートの「誤差伝播」計算を自動化。測定式と誤差範囲から最終誤差を算出。</div>
-            <div class="use-case">Use for: 物理学実験、機械加工精度の測定</div>
-        </div>
-        <div class="feature-cmd">"この式の誤差伝播を計算して"</div>
-    </div>
-
-    <div class="feature-card delay-5">
-        <div>
-            <div class="feature-icon">📐</div>
-            <div class="feature-title">Dimensional Check</div>
-            <div class="feature-desc">物理式の左辺と右辺で、次元（単位）が整合しているかをAIが解析・検算します。</div>
-            <div class="use-case">Use for: 伝熱工学の式変形チェック、流体解析の境界条件</div>
-        </div>
-        <div class="feature-cmd">"この式の両辺の次元解析をして"</div>
-    </div>
-
-    <div class="feature-card delay-6">
-        <div>
-            <div class="feature-icon">📝</div>
-            <div class="feature-title">Academic Polish</div>
-            <div class="feature-desc">書き殴った文章を、提出に耐えうる「学術的かつ論理的な日本語」に推敲・校正。</div>
-            <div class="use-case">Use for: 最終レポートの考察、卒業論文</div>
-        </div>
-        <div class="feature-cmd">"学術的なレポート調にリライトして"</div>
-    </div>
-</div>
-
-<div style="text-align: center; margin-top: 80px; color: #333; font-size: 0.8rem; padding-bottom: 20px;">
-    Designed for Mechanical Engineering Students. v5.1 Final Architect
-</div>
+# ==========================================
+# 📜 JAVASCRIPT (Scroll Observer)
+# ==========================================
+SCROLL_JS = """
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('is-visible');
+            }
+        });
+    }, { threshold: 0.15 });
+    const targets = document.querySelectorAll('.section-header, .bento-card');
+    targets.forEach((el) => observer.observe(el));
+});
+</script>
 """
 
 # ==========================================
-# 🚀 3. メイン処理
+# 🧱 HTML COMPONENTS
+# ==========================================
+def create_bento_card(image_path, title, desc, cmd):
+    # 画像をBase64文字列に変換
+    img_src = get_image_base64(image_path)
+    
+    return f"""
+    <div class="bento-card">
+        <div>
+            <div class="card-icon-container">
+                <img src="{img_src}" class="card-image" alt="icon">
+            </div>
+            <div class="card-title">{title}</div>
+            <div class="card-desc">{desc}</div>
+        </div>
+        <div class="card-cmd">"{cmd}"</div>
+    </div>
+    """
+
+def get_static_content():
+    # ここで画像ファイル名を指定します
+    cards = [
+        # LaTeXロゴ
+        create_bento_card("icon_latex.png", "Math Vision.", "板書の数式を、一瞬でLaTeXに。", "この画像をLaTeXにして"),
+        # グラフの画像
+        create_bento_card("icon_graph.png", "Graph Reverse.", "論文のグラフから、データを復元。", "このグラフをCSVにして"),
+        # Javaコードの画像（Polyglotの象徴として）
+        create_bento_card("icon_code.png", "Polyglot.", "MATLABを、Pythonへ。", "Pythonに書き換えて"),
+        # ダッシュボード/エラーの画像
+        create_bento_card("icon_error.png", "Error Analysis.", "誤差伝播を、自動計算。", "誤差伝播を計算して"),
+        # 図形の画像（次元解析）
+        create_bento_card("icon_dimension.png", "Dimensions.", "物理式の整合性を、検算。", "次元解析をして"),
+        # フローチャートの画像（推敲プロセス）
+        create_bento_card("icon_polish.png", "Refine.", "文章を、論文のクオリティへ。", "学術的にリライトして")
+    ]
+    
+    return f"""
+    <div class="section-header">
+        <div class="text-headline">Engineering Intelligence.</div>
+        <div class="text-subhead">機械工学科のための<br>究極のサバイバルツール。</div>
+    </div>
+    <div class="bento-grid">
+        {"".join(cards)}
+    </div>
+    <div style="text-align:center; padding: 100px 0; color: #444; font-size: 12px;">
+        Designed in Yokohama.
+    </div>
+    {SCROLL_JS}
+    """
+
+def get_hero_content(code, progress, bar_class, remaining):
+    return f"""
+    <div class="hero-section">
+        <div class="otp-label">TITANIUM SECURITY</div>
+        <div class="otp-display">{code}</div>
+        <div class="progress-container">
+            <div class="progress-fill {bar_class}" style="width: {progress}%;"></div>
+        </div>
+        <div style="color: #666; font-size: 14px; font-weight: 500;">
+            Updating in <span style="color: #fff;">{remaining}</span>s
+        </div>
+    </div>
+    """
+
+# ==========================================
+# 🚀 MAIN APP
 # ==========================================
 def main():
-    st.set_page_config(page_title="Auth Pro Max", page_icon="", layout="wide")
-    
-    # CSSの適用（1回だけ）
+    st.set_page_config(page_title="iPhone 17 Pro Auth", page_icon="", layout="wide")
     st.markdown(STYLES, unsafe_allow_html=True)
 
     if not TEAM_SECRET_KEY or "ARHX" not in TEAM_SECRET_KEY:
         st.error("⚠️ Secrets Error")
         return
 
+    hero_placeholder = st.empty()
+    # 静的コンテンツ（画像入りグリッド）を描画
+    st.markdown(get_static_content(), unsafe_allow_html=True)
+
     try:
         totp = pyotp.TOTP(TEAM_SECRET_KEY)
-        main_placeholder = st.empty()
-        
         while True:
             current_code = totp.now()
             time_remaining = totp.interval - (time.time() % totp.interval)
             progress_percent = (time_remaining / 30.0) * 100
-            
-            # 表示用データ作成
             display_code = f"{current_code[:3]} {current_code[3:]}"
-            bar_class = "progress-bar warning-mode" if time_remaining <= 5 else "progress-bar"
+            bar_class = "warning" if time_remaining <= 5 else ""
             
-            # HTML生成（関数を呼ぶだけ！）
-            html_content = render_dashboard(display_code, progress_percent, bar_class, int(time_remaining))
-            
-            # 描画
-            main_placeholder.markdown(html_content, unsafe_allow_html=True)
-            
+            hero_placeholder.markdown(
+                get_hero_content(display_code, progress_percent, bar_class, int(time_remaining)),
+                unsafe_allow_html=True
+            )
             time.sleep(0.1)
 
     except Exception as e:
