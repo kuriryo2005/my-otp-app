@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pyotp
 import time
@@ -6,9 +5,14 @@ import time
 # ==========================================
 # ⚙️ SETTINGS
 # ==========================================
-# ↓ ここにあなたのキーを入れてください
-TEAM_SECRET_KEY = st.secrets["TEAM_SECRET_KEY"]
-
+# Streamlit CloudのSecretsからキーを取得
+# ※注意: これを使うと、手元のPCで動かす時はエラーになりますが、
+# サーバー(Cloud)上では正常に動きます。
+try:
+    TEAM_SECRET_KEY = st.secrets["TEAM_SECRET_KEY"]
+except FileNotFoundError:
+    # もし手元で動かす場合用（アップロード時は無視されます）
+    TEAM_SECRET_KEY = "ARHXCWTVFU54ITHIXS4Q76SVCDFLC5TU"
 # ==========================================
 
 st.set_page_config(page_title="Auth Pro", page_icon="", layout="wide")
@@ -144,13 +148,13 @@ header, footer {visibility: hidden;}
     padding: 4px 8px;
     border-radius: 6px;
 }
-
 </style>
 """, unsafe_allow_html=True)
 
 def main():
-    if "ARHX" not in TEAM_SECRET_KEY:
-        st.error("⚠️ TEAM_SECRET_KEY を設定してください")
+    # Secretsが読み込めているかチェック
+    if not TEAM_SECRET_KEY or "ARHX" not in TEAM_SECRET_KEY:
+        st.error("⚠️ TEAM_SECRET_KEY が正しく設定されていません。StreamlitのSettings > Secretsを確認してください。")
         return
 
     try:
@@ -158,11 +162,6 @@ def main():
         
         # メイン表示エリア
         main_placeholder = st.empty()
-        
-        # Tips表示エリア (ループの外で一度だけ描画しても良いが、今回はレイアウト維持のため下部に配置)
-        # Streamlitの仕様上、whileループの後には到達しないため、
-        # プレースホルダーを使って「ループのたびに描画」するか、
-        # コンテナを使って上下に分ける必要があります。
         
         while True:
             current_code = totp.now()
@@ -230,5 +229,6 @@ def main():
     except Exception as e:
         st.error(f"Error: {e}")
 
+# ここが重要！これがないと動きません
 if __name__ == "__main__":
     main()
