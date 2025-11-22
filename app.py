@@ -1,7 +1,6 @@
 import streamlit as st
 import pyotp
 import time
-import textwrap
 
 # ==========================================
 # ⚙️ SETTINGS
@@ -10,19 +9,17 @@ try:
     TEAM_SECRET_KEY = st.secrets["TEAM_SECRET_KEY"]
 except FileNotFoundError:
     TEAM_SECRET_KEY = "ARHXCWTVFU54ITHIXS4Q76SVCDFLC5TU"
+
 # ==========================================
-
-st.set_page_config(page_title="Auth Pro Max", page_icon="", layout="wide")
-
-# ---  Ultra-High-End Design System ---
-st.markdown("""
+# 🎨 CSS STYLES (Static)
+# ==========================================
+# CSSをループの外に出して、読み込みを安定させます
+CSS_CODE = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400&display=swap');
 
-/* --- 1. Base Atmosphere --- */
 .stApp {
     background-color: #000;
-    /* 深海のような重厚なグラデーション */
     background: radial-gradient(circle at 50% 0%, #1c1c1e 0%, #000000 85%);
     font-family: 'Inter', sans-serif;
     color: #f5f5f7;
@@ -32,19 +29,11 @@ st.markdown("""
 header, footer {visibility: hidden;}
 .block-container { padding-top: 2rem; max-width: 1200px; }
 
-/* --- 2. Animations (Motion Design) --- */
 @keyframes fadeInUp {
     from { opacity: 0; transform: translateY(30px); }
     to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes pulse-glow {
-    0% { box-shadow: 0 0 15px rgba(255,255,255,0.1); }
-    50% { box-shadow: 0 0 25px rgba(255,255,255,0.3); }
-    100% { box-shadow: 0 0 15px rgba(255,255,255,0.1); }
-}
-
-/* --- 3. Hero Section --- */
 .hero-container {
     text-align: center;
     margin-bottom: 80px;
@@ -55,8 +44,6 @@ header, footer {visibility: hidden;}
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 32px;
     box-shadow: 0 30px 60px rgba(0,0,0,0.7);
-    
-    /* アニメーション適用 */
     animation: fadeInUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
@@ -82,7 +69,6 @@ header, footer {visibility: hidden;}
     filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5));
 }
 
-/* --- Progress Bar --- */
 .progress-wrapper {
     width: 50%;
     height: 8px;
@@ -106,7 +92,6 @@ header, footer {visibility: hidden;}
     box-shadow: 0 0 25px rgba(255, 59, 48, 0.8);
 }
 
-/* --- 4. Grid Layout --- */
 .grid-header {
     font-size: 3.5rem;
     font-weight: 700;
@@ -114,8 +99,6 @@ header, footer {visibility: hidden;}
     text-align: left;
     color: #f5f5f7;
     letter-spacing: -1px;
-    
-    /* アニメーション */
     opacity: 0;
     animation: fadeInUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) 0.2s forwards;
 }
@@ -126,8 +109,6 @@ header, footer {visibility: hidden;}
     margin-bottom: 50px;
     max-width: 600px;
     line-height: 1.5;
-    
-    /* アニメーション */
     opacity: 0;
     animation: fadeInUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) 0.3s forwards;
 }
@@ -139,7 +120,6 @@ header, footer {visibility: hidden;}
     padding-bottom: 100px;
 }
 
-/* --- 5. Feature Cards (Voluminous Content) --- */
 .feature-card {
     background: #151516;
     border-radius: 28px;
@@ -150,13 +130,10 @@ header, footer {visibility: hidden;}
     flex-direction: column;
     justify-content: space-between;
     transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
-    
-    /* 初期状態は隠す */
     opacity: 0;
     animation: fadeInUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
-/* 順番に表示させる遅延設定 (Stagger) */
 .delay-1 { animation-delay: 0.4s; }
 .delay-2 { animation-delay: 0.5s; }
 .delay-3 { animation-delay: 0.6s; }
@@ -181,20 +158,8 @@ header, footer {visibility: hidden;}
     border: 1px solid rgba(255,255,255,0.05);
 }
 
-.feature-title { 
-    font-weight: 700; 
-    font-size: 1.5rem; 
-    color: #fff; 
-    margin-bottom: 12px; 
-}
-
-.feature-desc { 
-    font-size: 1rem; 
-    color: #a1a1a6; 
-    line-height: 1.6; 
-    margin-bottom: 20px;
-}
-
+.feature-title { font-weight: 700; font-size: 1.5rem; color: #fff; margin-bottom: 12px; }
+.feature-desc { font-size: 1rem; color: #a1a1a6; line-height: 1.6; margin-bottom: 20px; }
 .use-case {
     font-size: 0.85rem;
     color: #6e6e73;
@@ -202,22 +167,151 @@ header, footer {visibility: hidden;}
     padding-left: 10px;
     border-left: 2px solid #333;
 }
-
 .feature-cmd {
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.85rem;
-    color: #64d2ff; /* Cyan */
+    color: #64d2ff;
     background: rgba(100, 210, 255, 0.1);
     padding: 12px 15px;
     border-radius: 12px;
     border: 1px solid rgba(100, 210, 255, 0.15);
     word-break: break-all;
 }
-
 </style>
-""", unsafe_allow_html=True)
+"""
 
+# ==========================================
+# 🏗️ HTML GENERATOR (Component)
+# ==========================================
+# 関数化することでインデント問題を完全に回避します
+def get_dashboard_html(display_code, progress_percent, bar_class, time_remaining):
+    return f"""
+    <div class="hero-container">
+        <div class="hero-label">Titanium Security Layer</div>
+        <div class="hero-code">{display_code}</div>
+        
+        <div class="progress-wrapper">
+            <div class="{bar_class}" style="width: {progress_percent}%;"></div>
+        </div>
+        
+        <div style="color: #86868b; font-size: 0.9rem; font-weight: 500; letter-spacing: 0.5px;">
+            SYNCING WITH SECURE ENCLAVE: <span style="color:#fff;">{int(time_remaining)}s</span>
+        </div>
+    </div>
+    
+    <div>
+        <div class="grid-header">Engineering Intelligence.</div>
+        <div class="grid-sub">
+            機械工学科の課題・実験・研究をハックする6つのAIプロンプト。<br>
+            授業で使える具体的なユースケースをプリセット。
+        </div>
+    </div>
+    
+    <div class="bento-grid">
+        <div class="feature-card delay-1">
+            <div>
+                <div class="feature-icon">📸</div>
+                <div class="feature-title">Math Vision to LaTeX</div>
+                <div class="feature-desc">
+                    板書や教科書の複雑な数式（積分・偏微分・行列）をスマホで撮影してアップロードするだけ。
+                    一瞬でレポートに貼り付け可能なLaTeXコードに変換します。
+                </div>
+                <div class="use-case">
+                    Use for: 流体力学のナビエ・ストークス方程式、熱力学の偏微分
+                </div>
+            </div>
+            <div class="feature-cmd">"この画像を解析して、Overleafに貼れるLaTeXコードを出力して"</div>
+        </div>
+        
+        <div class="feature-card delay-2">
+            <div>
+                <div class="feature-icon">📊</div>
+                <div class="feature-title">Graph Reverse Eng.</div>
+                <div class="feature-desc">
+                    論文のPDFや参考書のグラフ画像を解析し、元のプロットデータ（CSV数値）を復元・抽出します。
+                    先行研究と自分の実験データをExcelやPythonで重ね合わせたい時に。
+                </div>
+                <div class="use-case">
+                    Use for: 材料力学のS-N曲線比較、エンジンのトルク線図
+                </div>
+            </div>
+            <div class="feature-cmd">"このグラフ画像のプロットデータを抽出し、CSV形式で出力して"</div>
+        </div>
+        
+        <div class="feature-card delay-3">
+            <div>
+                <div class="feature-icon">🐍</div>
+                <div class="feature-title">Polyglot Converter</div>
+                <div class="feature-desc">
+                    授業で指定されたMATLABコードを、使い慣れたPython (NumPy/SciPy) に完全移植します。
+                    C言語やFortranへの書き換えも可能。
+                </div>
+                <div class="use-case">
+                    Use for: 制御工学演習、数値解析の課題
+                </div>
+            </div>
+            <div class="feature-cmd">"このMATLABコードをPythonに変換し、ライブラリの依存関係も教えて"</div>
+        </div>
+
+        <div class="feature-card delay-4">
+            <div>
+                <div class="feature-icon">🧪</div>
+                <div class="feature-title">Error Propagation</div>
+                <div class="feature-desc">
+                    実験レポート最大の難所「誤差伝播」の計算を自動化。
+                    測定式と各変数の誤差範囲を入力すれば、偏微分を用いた最終的な誤差を算出します。
+                </div>
+                <div class="use-case">
+                    Use for: 物理学実験、機械加工精度の測定
+                </div>
+            </div>
+            <div class="feature-cmd">"この式の誤差伝播を計算して。測定値x=10±0.1, y=5±0.05とする"</div>
+        </div>
+
+        <div class="feature-card delay-5">
+            <div>
+                <div class="feature-icon">📐</div>
+                <div class="feature-title">Dimensional Check</div>
+                <div class="feature-desc">
+                    複雑な物理式の左辺と右辺で、次元（単位）が整合しているかをAIが解析・検算します。
+                    無次元数が正しく構成されているかのチェックにも。
+                </div>
+                <div class="use-case">
+                    Use for: 伝熱工学の式変形チェック、流体解析の境界条件
+                </div>
+            </div>
+            <div class="feature-cmd">"この式の両辺の次元解析を行い、物理的に正しいか検証して"</div>
+        </div>
+
+        <div class="feature-card delay-6">
+            <div>
+                <div class="feature-icon">📝</div>
+                <div class="feature-title">Academic Polish</div>
+                <div class="feature-desc">
+                    書き殴った文章を、提出に耐えうる「学術的かつ論理的な日本語（である調）」に推敲・校正します。
+                </div>
+                <div class="use-case">
+                    Use for: 最終レポートの「考察」、卒業論文の草稿
+                </div>
+            </div>
+            <div class="feature-cmd">"この文章を、機械工学の実験レポートとして適切な学術的文章にリライトして"</div>
+        </div>
+    </div>
+    
+    <div style="text-align: center; margin-top: 80px; color: #333; font-size: 0.8rem; padding-bottom: 20px;">
+        Designed for Mechanical Engineering Students. v5.0 Titanium Pro Max
+    </div>
+    """
+
+# ==========================================
+# 🚀 MAIN APP
+# ==========================================
 def main():
+    st.set_page_config(page_title="Auth Pro Max", page_icon="", layout="wide")
+    
+    # CSSを注入（1回だけ）
+    st.markdown(CSS_CODE, unsafe_allow_html=True)
+
     if not TEAM_SECRET_KEY or "ARHX" not in TEAM_SECRET_KEY:
         st.error("⚠️ Secrets Error")
         return
@@ -233,128 +327,10 @@ def main():
             display_code = f"{current_code[:3]} {current_code[3:]}"
             bar_class = "progress-bar warning-mode" if time_remaining <= 5 else "progress-bar"
             
-            # HTML構築（ボリューム増・アニメーション対応）
-            html = textwrap.dedent(f"""
-            <div class="hero-container">
-                <div class="hero-label">Titanium Security Layer</div>
-                <div class="hero-code">{display_code}</div>
-                
-                <div class="progress-wrapper">
-                    <div class="{bar_class}" style="width: {progress_percent}%;"></div>
-                </div>
-                
-                <div style="color: #86868b; font-size: 0.9rem; font-weight: 500; letter-spacing: 0.5px;">
-                    SYNCING WITH SECURE ENCLAVE: <span style="color:#fff;">{int(time_remaining)}s</span>
-                </div>
-            </div>
+            # HTMLを生成する関数を呼び出す（これでインデントが崩れません！）
+            html_content = get_dashboard_html(display_code, progress_percent, bar_class, time_remaining)
             
-            <div>
-                <div class="grid-header">Engineering Intelligence.</div>
-                <div class="grid-sub">
-                    機械工学科の課題・実験・研究をハックする6つのAIプロンプト。<br>
-                    授業で使える具体的なユースケースをプリセット。
-                </div>
-            </div>
-            
-            <div class="bento-grid">
-                
-                <div class="feature-card delay-1">
-                    <div>
-                        <div class="feature-icon">📸</div>
-                        <div class="feature-title">Math Vision to LaTeX</div>
-                        <div class="feature-desc">
-                            板書や教科書の複雑な数式（積分・偏微分・行列）をスマホで撮影してアップロードするだけ。
-                            一瞬でレポートに貼り付け可能なLaTeXコードに変換します。手打ちの時間をゼロに。
-                        </div>
-                        <div class="use-case">
-                            Use for: 流体力学のナビエ・ストークス方程式、熱力学の偏微分、制御工学のブロック線図数式化
-                        </div>
-                    </div>
-                    <div class="feature-cmd">"この画像を解析して、Overleafに貼れるLaTeXコードを出力して"</div>
-                </div>
-                
-                <div class="feature-card delay-2">
-                    <div>
-                        <div class="feature-icon">📊</div>
-                        <div class="feature-title">Graph Reverse Eng.</div>
-                        <div class="feature-desc">
-                            論文のPDFや参考書のグラフ画像を解析し、元のプロットデータ（CSV数値）を復元・抽出します。
-                            先行研究と自分の実験データをExcelやPythonで重ね合わせたい時に必須の機能です。
-                        </div>
-                        <div class="use-case">
-                            Use for: 材料力学のS-N曲線比較、エンジンのトルク線図、実験レポートの考察作成
-                        </div>
-                    </div>
-                    <div class="feature-cmd">"このグラフ画像のプロットデータを抽出し、CSV形式で出力して"</div>
-                </div>
-                
-                <div class="feature-card delay-3">
-                    <div>
-                        <div class="feature-icon">🐍</div>
-                        <div class="feature-title">Polyglot Converter</div>
-                        <div class="feature-desc">
-                            授業で指定されたMATLABコードを、使い慣れたPython (NumPy/SciPy) に完全移植します。
-                            逆に、Pythonで書いたシミュレーションを提出用にC言語やFortranに書き換えることも可能です。
-                        </div>
-                        <div class="use-case">
-                            Use for: 制御工学演習、数値解析の課題、研究室の過去遺産コードの解読
-                        </div>
-                    </div>
-                    <div class="feature-cmd">"このMATLABコードをPythonに変換し、ライブラリの依存関係も教えて"</div>
-                </div>
-
-                <div class="feature-card delay-4">
-                    <div>
-                        <div class="feature-icon">🧪</div>
-                        <div class="feature-title">Error Propagation</div>
-                        <div class="feature-desc">
-                            実験レポート最大の難所「誤差伝播」の計算を自動化。
-                            測定式と各変数の誤差範囲（±0.05mmなど）を入力すれば、偏微分を用いた最終的な誤差を算出します。
-                        </div>
-                        <div class="use-case">
-                            Use for: 物理学実験、機械加工精度の測定、熱伝導率の測定レポート
-                        </div>
-                    </div>
-                    <div class="feature-cmd">"この式の誤差伝播を計算して。測定値x=10±0.1, y=5±0.05とする"</div>
-                </div>
-
-                <div class="feature-card delay-5">
-                    <div>
-                        <div class="feature-icon">📐</div>
-                        <div class="feature-title">Dimensional Check</div>
-                        <div class="feature-desc">
-                            複雑な物理式の左辺と右辺で、次元（単位）が整合しているかをAIが解析・検算します。
-                            レイノルズ数やヌセルト数などの無次元数が正しく構成されているかのチェックにも最適です。
-                        </div>
-                        <div class="use-case">
-                            Use for: 伝熱工学の式変形チェック、流体解析の境界条件設定、単位換算ミス防止
-                        </div>
-                    </div>
-                    <div class="feature-cmd">"この式の両辺の次元解析を行い、物理的に正しいか検証して"</div>
-                </div>
-
-                <div class="feature-card delay-6">
-                    <div>
-                        <div class="feature-icon">📝</div>
-                        <div class="feature-title">Academic Polish</div>
-                        <div class="feature-desc">
-                            深夜に書き殴った支離滅裂な文章を、提出に耐えうる「学術的かつ論理的な日本語（である調）」に推敲・校正します。
-                            接続詞の使い方や受動態・能動態のバランスも整えます。
-                        </div>
-                        <div class="use-case">
-                            Use for: 最終レポートの「考察」、卒業論文の草稿、学会の予稿作成
-                        </div>
-                    </div>
-                    <div class="feature-cmd">"この文章を、機械工学の実験レポートとして適切な学術的文章にリライトして"</div>
-                </div>
-            </div>
-            
-            <div style="text-align: center; margin-top: 80px; color: #333; font-size: 0.8rem; padding-bottom: 20px;">
-                Designed for Mechanical Engineering Students. v5.0 Titanium Pro Max
-            </div>
-            """)
-            
-            main_placeholder.markdown(html, unsafe_allow_html=True)
+            main_placeholder.markdown(html_content, unsafe_allow_html=True)
             time.sleep(0.1)
 
     except Exception as e:
