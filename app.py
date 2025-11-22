@@ -1,7 +1,6 @@
 import streamlit as st
 import pyotp
 import time
-import base64
 
 # ==========================================
 # ⚙️ SETTINGS
@@ -12,7 +11,7 @@ except FileNotFoundError:
     TEAM_SECRET_KEY = "ARHXCWTVFU54ITHIXS4Q76SVCDFLC5TU"
 
 # ==========================================
-# 💎 SVG ICONS (埋め込み)
+# 💎 SVG ICONS
 # ==========================================
 ICON_MATH = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>"""
 ICON_GRAPH = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>"""
@@ -22,11 +21,29 @@ ICON_DIMENSION = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" 
 ICON_POLISH = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>"""
 
 # ==========================================
-# 🎨 CSS STYLES (Safety First)
+# 🎨 CSS STYLES (Animation Engine)
 # ==========================================
 STYLES = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=SF+Pro+Display&display=swap');
+
+/* --- Keyframes (動きの定義) --- */
+/* 下からフワッと浮き上がる */
+@keyframes floatUp {
+    0% { opacity: 0; transform: translateY(40px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+/* 上から降りてくる */
+@keyframes floatDown {
+    0% { opacity: 0; transform: translateY(-40px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+/* コードが呼吸するように明滅する */
+@keyframes breathe {
+    0% { filter: drop-shadow(0 0 15px rgba(255,255,255,0.1)); }
+    50% { filter: drop-shadow(0 0 30px rgba(255,255,255,0.4)); }
+    100% { filter: drop-shadow(0 0 15px rgba(255,255,255,0.1)); }
+}
 
 /* Global */
 .stApp { background-color: #000; background: #050507; color: #f5f5f7; font-family: "SF Pro Display", sans-serif; overflow-x: hidden; }
@@ -34,24 +51,30 @@ header, footer { visibility: hidden; }
 .block-container { padding-top: 4rem; padding-bottom: 10rem; max-width: 1000px; }
 
 /* Hero Section */
-.hero-section { text-align: center; margin-bottom: 100px; padding: 60px 20px; }
+.hero-section { 
+    text-align: center; margin-bottom: 100px; padding: 60px 20px; 
+    /* ページを開いた瞬間に上から降りてくる */
+    animation: floatDown 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
 .otp-display { 
     font-size: 160px; font-weight: 700; letter-spacing: -6px; margin: 20px 0; 
     background: linear-gradient(135deg, #fff 0%, #8a8a8e 100%); 
     -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-    /* 万が一グラデーションが効かない場合のフォールバック色 */
-    color: #e0e0e0; 
+    /* 呼吸アニメーション */
+    animation: breathe 4s infinite ease-in-out;
 }
 .otp-label { font-size: 14px; font-weight: 600; letter-spacing: 0.2em; color: #d59464; margin-bottom: 10px; }
 .progress-container { width: 240px; height: 4px; background: #333; margin: 40px auto; border-radius: 2px; overflow: hidden; }
 .progress-fill { height: 100%; background: #fff; transition: width 1s linear; }
 .warning { background: #ff453a !important; }
 
-/* Bento Grid (JS依存を削除し、CSSアニメーションのみにする) */
+/* Bento Grid */
 .section-header { 
     margin-top: 100px; margin-bottom: 60px; padding: 0 20px; 
-    /* 単純なフェードインのみ */
-    animation: simpleFadeIn 1s ease-out forwards;
+    /* タイトルも浮き上がる */
+    opacity: 0; /* 初期状態は透明 */
+    animation: floatUp 1s cubic-bezier(0.2, 0.8, 0.2, 1) 0.2s forwards;
 }
 .text-headline { font-size: 56px; font-weight: 600; margin-bottom: 20px; }
 .text-subhead { font-size: 28px; color: #86868b; }
@@ -62,30 +85,26 @@ header, footer { visibility: hidden; }
     background: #101010; border-radius: 30px; padding: 40px 36px; height: 450px; 
     display: flex; flex-direction: column; justify-content: space-between; 
     border: 1px solid #1d1d1f; 
-    /* 透明度0を廃止し、最初から見えるように設定 */
-    opacity: 0; 
-    animation: simpleFadeIn 0.8s ease-out forwards;
+    
+    /* カードの出現アニメーション設定 */
+    opacity: 0; /* 初期状態は透明 */
+    animation: floatUp 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
-.bento-card:hover { transform: scale(1.02); background: #151515; border-color: #333; }
+.bento-card:hover { transform: scale(1.02); background: #151515; border-color: #333; transition: transform 0.3s ease; }
 
-/* Stagger Animation (順番に表示) */
-.delay-1 { animation-delay: 0.2s; }
-.delay-2 { animation-delay: 0.4s; }
+/* Stagger Animation (カードごとの時間差出現) */
+.delay-1 { animation-delay: 0.4s; }
+.delay-2 { animation-delay: 0.5s; }
 .delay-3 { animation-delay: 0.6s; }
-.delay-4 { animation-delay: 0.8s; }
-.delay-5 { animation-delay: 1.0s; }
-.delay-6 { animation-delay: 1.2s; }
+.delay-4 { animation-delay: 0.7s; }
+.delay-5 { animation-delay: 0.8s; }
+.delay-6 { animation-delay: 0.9s; }
 
 .card-icon-box { width: 60px; height: 60px; margin-bottom: 25px; background: rgba(255,255,255,0.05); border-radius: 16px; display: flex; align-items: center; justify-content: center; }
 .card-icon-box svg { width: 32px; height: 32px; }
 .card-title { font-size: 28px; font-weight: 700; color: #f5f5f7; margin-bottom: 12px; }
 .card-desc { font-size: 17px; line-height: 1.5; color: #86868b; }
 .card-cmd { margin-top: auto; font-family: monospace; font-size: 13px; color: #fff; background: rgba(255,255,255,0.1); padding: 16px; border-radius: 16px; }
-
-@keyframes simpleFadeIn {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-}
 </style>
 """
 
@@ -93,6 +112,7 @@ header, footer { visibility: hidden; }
 # 🧱 COMPONENTS
 # ==========================================
 def create_card(svg_icon, title, desc, cmd, delay_class):
+    # delay_class (delay-1, delay-2...) を適用して時間差をつける
     return f"""<div class="bento-card {delay_class}"><div><div class="card-icon-box">{svg_icon}</div><div class="card-title">{title}</div><div class="card-desc">{desc}</div></div><div class="card-cmd">"{cmd}"</div></div>"""
 
 def get_static_content():
@@ -104,7 +124,6 @@ def get_static_content():
         create_card(ICON_DIMENSION, "Dimensions", "物理式の整合性を、検算。", "次元解析をして", "delay-5"),
         create_card(ICON_POLISH, "Refine", "文章を、論文のクオリティへ。", "学術的にリライトして", "delay-6")
     ]
-    
     cards_html = "".join(cards)
     
     return f"""<div class="section-header"><div class="text-headline">Engineering Intelligence.</div><div class="text-subhead">機械工学科のための<br>究極のサバイバルツール。</div></div><div class="bento-grid">{cards_html}</div><div style="text-align:center; padding: 100px 0; color: #444; font-size: 12px;">Designed in Yokohama.</div>"""
@@ -117,7 +136,6 @@ def get_hero_content(code, progress, bar_class, remaining):
 # ==========================================
 def main():
     st.set_page_config(page_title="iPhone 17 Pro Auth", page_icon="", layout="wide")
-    # JSを削除し、CSSのみ適用
     st.markdown(STYLES, unsafe_allow_html=True)
 
     if not TEAM_SECRET_KEY or "ARHX" not in TEAM_SECRET_KEY:
@@ -125,7 +143,8 @@ def main():
         return
 
     hero_placeholder = st.empty()
-    # 静的コンテンツの描画
+    
+    # アニメーション付きの静的コンテンツを描画
     st.markdown(get_static_content(), unsafe_allow_html=True)
 
     try:
