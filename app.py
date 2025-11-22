@@ -1,170 +1,234 @@
+
 import streamlit as st
 import pyotp
 import time
 
 # ==========================================
-# 🔑 シークレットキー設定
+# ⚙️ SETTINGS
 # ==========================================
-# ↓ クォーテーション "" で囲まれているか確認してください！
-# Streamlitの金庫からキーを取り出す命令
+# ↓ ここにあなたのキーを入れてください
 TEAM_SECRET_KEY = st.secrets["TEAM_SECRET_KEY"]
+
 # ==========================================
 
-st.set_page_config(page_title="Flux Authenticator", page_icon="💎", layout="wide")
+st.set_page_config(page_title="Auth Pro", page_icon="", layout="wide")
 
-# --- 🎨 CSS Animations & Styles ---
-# ここからデザイン設定（長いですが、途中で切らないように！）
+# ---  Apple-style Design System ---
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;500;700&family=SF+Pro+Display&display=swap');
 
-/* 背景アニメーション */
-@keyframes gradient-bg {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-}
-
-/* 光の脈動アニメーション */
-@keyframes glow-pulse {
-    0% { text-shadow: 0 0 10px rgba(255,255,255,0.1); opacity: 0.9; }
-    50% { text-shadow: 0 0 30px rgba(0, 243, 255, 0.6), 0 0 60px rgba(0, 243, 255, 0.4); opacity: 1; }
-    100% { text-shadow: 0 0 10px rgba(255,255,255,0.1); opacity: 0.9; }
-}
-
-/* 全体設定 */
+/* --- 全体設定: 深い宇宙のような黒 --- */
 .stApp {
-    background: linear-gradient(-45deg, #000000, #1a1a2e, #16213e, #0f3460);
-    background-size: 400% 400%;
-    animation: gradient-bg 15s ease infinite;
-    color: #fff;
-    font-family: 'Rajdhani', sans-serif;
-    overflow: hidden;
+    background-color: #000;
+    background: radial-gradient(circle at 50% 0%, #2c2c2e 0%, #000000 70%);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    color: #f5f5f7;
 }
 
+/* ヘッダーなどを消す */
 header, footer {visibility: hidden;}
-.block-container { padding-top: 10vh; max-width: 800px; }
+.block-container { padding-top: 3rem; max-width: 960px; }
 
-/* カードデザイン */
-.flux-card {
+/* --- メインのワンタイムパスコード表示部 --- */
+.hero-container {
+    text-align: center;
+    margin-bottom: 60px;
+    padding: 40px;
+    /* すりガラス効果 */
     background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 30px;
-    padding: 60px 20px;
-    text-align: center;
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-    position: relative;
-    overflow: hidden;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.5);
 }
 
-.label-text {
-    font-size: 1.2rem;
-    letter-spacing: 3px;
-    color: rgba(255,255,255,0.5);
+.hero-label {
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 2px;
     text-transform: uppercase;
+    color: #86868b; /* Apple Gray */
     margin-bottom: 10px;
 }
 
-.code-text {
-    font-size: 7rem;
+.hero-code {
+    font-size: 8rem;
     font-weight: 700;
-    letter-spacing: 10px;
-    margin: 20px 0;
-    color: #fff;
-    animation: glow-pulse 3s infinite ease-in-out;
+    letter-spacing: -2px;
+    margin: 10px 0;
+    /* チタニウム・グラデーション文字 */
+    background: linear-gradient(180deg, #ffffff 0%, #86868b 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-variant-numeric: tabular-nums; /* 数字の幅を等しく */
+    transition: all 0.3s ease;
 }
 
-/* プログレスバー */
-.progress-container {
-    width: 80%;
-    height: 8px;
-    background: rgba(255,255,255,0.1);
+/* --- プログレスバー (Dynamic Island風) --- */
+.progress-wrapper {
+    width: 60%;
+    height: 6px;
+    background: #333;
     border-radius: 10px;
-    margin: 0 auto;
+    margin: 0 auto 20px auto;
     overflow: hidden;
-    box-shadow: inset 0 0 5px rgba(0,0,0,0.5);
 }
 
-.progress-fill {
+.progress-bar {
     height: 100%;
+    background: #fff;
     border-radius: 10px;
-    background: linear-gradient(90deg, #00f3ff, #0066ff);
-    box-shadow: 0 0 20px #00f3ff;
-    transition: width 0.5s linear, background 0.5s ease;
+    transition: width 1s linear;
+    box-shadow: 0 0 15px rgba(255,255,255,0.3);
 }
 
-.warning-fill {
-    background: linear-gradient(90deg, #ff0055, #ff5500) !important;
-    box-shadow: 0 0 20px #ff0055 !important;
+.warning-mode {
+    background: #ff453a !important; /* Apple Red */
+    box-shadow: 0 0 15px rgba(255, 69, 58, 0.5);
 }
 
-.footer-info {
-    margin-top: 30px;
+/* --- Tips セクション (Bento Grid) --- */
+.tips-header {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-top: 60px;
+    margin-bottom: 20px;
+    text-align: center;
+    background: linear-gradient(90deg, #fff, #86868b);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* カードデザイン */
+.feature-card {
+    background: #1c1c1e;
+    border-radius: 20px;
+    padding: 25px;
+    height: 100%;
+    transition: transform 0.3s ease;
+    border: 1px solid #333;
+}
+.feature-card:hover {
+    transform: scale(1.02);
+    background: #2c2c2e;
+    border-color: #fff;
+}
+
+.feature-icon {
+    font-size: 2rem;
+    margin-bottom: 15px;
+}
+
+.feature-title {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: #fff;
+    margin-bottom: 8px;
+}
+
+.feature-desc {
     font-size: 0.9rem;
-    color: rgba(255,255,255,0.4);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 10px;
+    color: #86868b;
+    line-height: 1.4;
 }
 
-.live-dot {
-    width: 8px;
-    height: 8px;
-    background-color: #00f3ff;
-    border-radius: 50%;
-    box-shadow: 0 0 10px #00f3ff;
-    animation: glow-pulse 1s infinite;
+.feature-cmd {
+    display: inline-block;
+    margin-top: 10px;
+    font-family: monospace;
+    font-size: 0.8rem;
+    color: #0a84ff; /* Apple Blue */
+    background: rgba(10, 132, 255, 0.1);
+    padding: 4px 8px;
+    border-radius: 6px;
 }
+
 </style>
-""", unsafe_allow_html=True) 
-# ↑ ここまでがCSSです！この行の """ と ) を絶対に消さないでください！
+""", unsafe_allow_html=True)
 
 def main():
-    # キー設定チェック
     if "ARHX" not in TEAM_SECRET_KEY:
-         st.error("⚠️ エラー: ソースコード内の TEAM_SECRET_KEY が正しく設定されていません。")
-         return
+        st.error("⚠️ TEAM_SECRET_KEY を設定してください")
+        return
 
     try:
         totp = pyotp.TOTP(TEAM_SECRET_KEY)
-        placeholder = st.empty()
+        
+        # メイン表示エリア
+        main_placeholder = st.empty()
+        
+        # Tips表示エリア (ループの外で一度だけ描画しても良いが、今回はレイアウト維持のため下部に配置)
+        # Streamlitの仕様上、whileループの後には到達しないため、
+        # プレースホルダーを使って「ループのたびに描画」するか、
+        # コンテナを使って上下に分ける必要があります。
         
         while True:
             current_code = totp.now()
             time_remaining = totp.interval - (time.time() % totp.interval)
             progress_percent = (time_remaining / 30.0) * 100
             
-            # 色の切り替え
-            bar_class = "progress-fill"
-            if time_remaining <= 5:
-                bar_class = "progress-fill warning-fill"
-            
+            # コード整形
             display_code = f"{current_code[:3]} {current_code[3:]}"
-
+            
+            # 警告色
+            bar_class = "progress-bar warning-mode" if time_remaining <= 5 else "progress-bar"
+            
+            # HTML構築
             html = f"""
-            <div class="flux-card">
-                <div class="label-text">Secure Access Token</div>
-                <div class="code-text">{display_code}</div>
-                <div class="progress-container">
+            <div class="hero-container">
+                <div class="hero-label">Shared Access Token</div>
+                <div class="hero-code">{display_code}</div>
+                
+                <div class="progress-wrapper">
                     <div class="{bar_class}" style="width: {progress_percent}%;"></div>
                 </div>
-                <div class="footer-info">
-                    <div class="live-dot"></div>
-                    <span>SYNCING: {int(time_remaining)}s</span>
+                
+                <div style="color: #86868b; font-size: 0.8rem;">
+                    Auto-refreshing in {int(time_remaining)}s
                 </div>
+            </div>
+            
+            <div class="tips-header">Campus Hacks</div>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+                
+                <div class="feature-card">
+                    <div class="feature-icon">📸</div>
+                    <div class="feature-title">Math Vision</div>
+                    <div class="feature-desc">
+                        手書き数式や教科書の写真を撮影してアップロード。一瞬でレポート用のLaTeXコードに変換します。
+                    </div>
+                    <div class="feature-cmd">Prompt: "これをLaTeXにして"</div>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <div class="feature-title">Graph Reverse</div>
+                    <div class="feature-desc">
+                        論文のグラフ画像から、プロットデータ(CSV)を復元・抽出。実験データの比較検討に最適です。
+                    </div>
+                    <div class="feature-cmd">Prompt: "このグラフをCSVにして"</div>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">⚙️</div>
+                    <div class="feature-title">Code Converter</div>
+                    <div class="feature-desc">
+                        授業のMATLABコードをPython(NumPy/Matplotlib)へ移植。またはその逆も。デバッグも同時に完了。
+                    </div>
+                    <div class="feature-cmd">Prompt: "MATLABをPythonにして"</div>
+                </div>
+                
             </div>
             """
             
-            placeholder.markdown(html, unsafe_allow_html=True)
+            main_placeholder.markdown(html, unsafe_allow_html=True)
             time.sleep(0.1)
 
     except Exception as e:
-        st.error(f"System Error: {e}")
+        st.error(f"Error: {e}")
 
 if __name__ == "__main__":
     main()
-
-# --- コード終了 ---
