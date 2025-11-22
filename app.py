@@ -1,7 +1,7 @@
 import streamlit as st
 import pyotp
 import time
-import textwrap  # <--- これを追加！魔法のライブラリです
+import textwrap
 
 # ==========================================
 # ⚙️ SETTINGS
@@ -12,122 +12,214 @@ except FileNotFoundError:
     TEAM_SECRET_KEY = "ARHXCWTVFU54ITHIXS4Q76SVCDFLC5TU"
 # ==========================================
 
-st.set_page_config(page_title="Auth Pro", page_icon="", layout="wide")
+st.set_page_config(page_title="Auth Pro Max", page_icon="", layout="wide")
 
-# ---  Apple-style Design System ---
+# ---  Ultra-High-End Design System ---
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;500;700&family=SF+Pro+Display&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400&display=swap');
 
+/* --- 1. Base Atmosphere --- */
 .stApp {
     background-color: #000;
-    background: radial-gradient(circle at 50% 0%, #2c2c2e 0%, #000000 70%);
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    /* 深海のような重厚なグラデーション */
+    background: radial-gradient(circle at 50% 0%, #1c1c1e 0%, #000000 85%);
+    font-family: 'Inter', sans-serif;
     color: #f5f5f7;
+    overflow-x: hidden;
 }
 
 header, footer {visibility: hidden;}
-.block-container { padding-top: 3rem; max-width: 960px; }
+.block-container { padding-top: 2rem; max-width: 1200px; }
 
+/* --- 2. Animations (Motion Design) --- */
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-glow {
+    0% { box-shadow: 0 0 15px rgba(255,255,255,0.1); }
+    50% { box-shadow: 0 0 25px rgba(255,255,255,0.3); }
+    100% { box-shadow: 0 0 15px rgba(255,255,255,0.1); }
+}
+
+/* --- 3. Hero Section --- */
 .hero-container {
     text-align: center;
-    margin-bottom: 60px;
-    padding: 40px;
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 30px;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+    margin-bottom: 80px;
+    padding: 60px 40px;
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(40px);
+    -webkit-backdrop-filter: blur(40px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 32px;
+    box-shadow: 0 30px 60px rgba(0,0,0,0.7);
+    
+    /* アニメーション適用 */
+    animation: fadeInUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
 .hero-label {
     font-size: 14px;
-    font-weight: 500;
-    letter-spacing: 2px;
+    font-weight: 600;
+    letter-spacing: 4px;
     text-transform: uppercase;
     color: #86868b;
-    margin-bottom: 10px;
+    margin-bottom: 20px;
 }
 
 .hero-code {
-    font-size: 8rem;
-    font-weight: 700;
-    letter-spacing: -2px;
-    margin: 10px 0;
-    background: linear-gradient(180deg, #ffffff 0%, #86868b 100%);
+    font-size: 9rem;
+    font-weight: 800;
+    letter-spacing: -4px;
+    line-height: 1;
+    margin: 20px 0;
+    background: linear-gradient(180deg, #ffffff 10%, #555555 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     font-variant-numeric: tabular-nums;
-    transition: all 0.3s ease;
+    filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5));
 }
 
+/* --- Progress Bar --- */
 .progress-wrapper {
-    width: 60%;
-    height: 6px;
-    background: #333;
-    border-radius: 10px;
-    margin: 0 auto 20px auto;
+    width: 50%;
+    height: 8px;
+    background: #222;
+    border-radius: 100px;
+    margin: 0 auto 25px auto;
     overflow: hidden;
+    border: 1px solid #333;
 }
 
 .progress-bar {
     height: 100%;
     background: #fff;
-    border-radius: 10px;
+    border-radius: 100px;
     transition: width 1s linear;
-    box-shadow: 0 0 15px rgba(255,255,255,0.3);
+    box-shadow: 0 0 20px rgba(255,255,255,0.5);
 }
 
 .warning-mode {
-    background: #ff453a !important;
-    box-shadow: 0 0 15px rgba(255, 69, 58, 0.5);
+    background: #ff3b30 !important;
+    box-shadow: 0 0 25px rgba(255, 59, 48, 0.8);
 }
 
-.tips-header {
-    font-size: 2rem;
+/* --- 4. Grid Layout --- */
+.grid-header {
+    font-size: 3.5rem;
     font-weight: 700;
-    margin-top: 60px;
-    margin-bottom: 20px;
-    text-align: center;
-    background: linear-gradient(90deg, #fff, #86868b);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    margin-bottom: 10px;
+    text-align: left;
+    color: #f5f5f7;
+    letter-spacing: -1px;
+    
+    /* アニメーション */
+    opacity: 0;
+    animation: fadeInUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) 0.2s forwards;
+}
+.grid-sub {
+    font-size: 1.3rem;
+    color: #86868b;
+    font-weight: 400;
+    margin-bottom: 50px;
+    max-width: 600px;
+    line-height: 1.5;
+    
+    /* アニメーション */
+    opacity: 0;
+    animation: fadeInUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) 0.3s forwards;
 }
 
+.bento-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+    gap: 25px;
+    padding-bottom: 100px;
+}
+
+/* --- 5. Feature Cards (Voluminous Content) --- */
 .feature-card {
-    background: #1c1c1e;
-    border-radius: 20px;
-    padding: 25px;
+    background: #151516;
+    border-radius: 28px;
+    padding: 35px;
     height: 100%;
-    transition: transform 0.3s ease;
-    border: 1px solid #333;
-}
-.feature-card:hover {
-    transform: scale(1.02);
-    background: #2c2c2e;
-    border-color: #fff;
+    border: 1px solid rgba(255,255,255,0.05);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+    
+    /* 初期状態は隠す */
+    opacity: 0;
+    animation: fadeInUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
-.feature-icon { font-size: 2rem; margin-bottom: 15px; }
-.feature-title { font-weight: 700; font-size: 1.1rem; color: #fff; margin-bottom: 8px; }
-.feature-desc { font-size: 0.9rem; color: #86868b; line-height: 1.4; }
-.feature-cmd {
-    display: inline-block;
-    margin-top: 10px;
-    font-family: monospace;
-    font-size: 0.8rem;
-    color: #0a84ff;
-    background: rgba(10, 132, 255, 0.1);
-    padding: 4px 8px;
-    border-radius: 6px;
+/* 順番に表示させる遅延設定 (Stagger) */
+.delay-1 { animation-delay: 0.4s; }
+.delay-2 { animation-delay: 0.5s; }
+.delay-3 { animation-delay: 0.6s; }
+.delay-4 { animation-delay: 0.7s; }
+.delay-5 { animation-delay: 0.8s; }
+.delay-6 { animation-delay: 0.9s; }
+
+.feature-card:hover {
+    transform: scale(1.02) translateY(-5px);
+    background: #1c1c1e;
+    border-color: rgba(255,255,255,0.3);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
 }
+
+.feature-icon { 
+    font-size: 2.5rem; 
+    margin-bottom: 20px; 
+    background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.02));
+    width: 64px; height: 64px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 18px;
+    border: 1px solid rgba(255,255,255,0.05);
+}
+
+.feature-title { 
+    font-weight: 700; 
+    font-size: 1.5rem; 
+    color: #fff; 
+    margin-bottom: 12px; 
+}
+
+.feature-desc { 
+    font-size: 1rem; 
+    color: #a1a1a6; 
+    line-height: 1.6; 
+    margin-bottom: 20px;
+}
+
+.use-case {
+    font-size: 0.85rem;
+    color: #6e6e73;
+    margin-bottom: 15px;
+    padding-left: 10px;
+    border-left: 2px solid #333;
+}
+
+.feature-cmd {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    color: #64d2ff; /* Cyan */
+    background: rgba(100, 210, 255, 0.1);
+    padding: 12px 15px;
+    border-radius: 12px;
+    border: 1px solid rgba(100, 210, 255, 0.15);
+    word-break: break-all;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
 def main():
     if not TEAM_SECRET_KEY or "ARHX" not in TEAM_SECRET_KEY:
-        st.error("⚠️ TEAM_SECRET_KEY Error")
+        st.error("⚠️ Secrets Error")
         return
 
     try:
@@ -138,43 +230,127 @@ def main():
             current_code = totp.now()
             time_remaining = totp.interval - (time.time() % totp.interval)
             progress_percent = (time_remaining / 30.0) * 100
-            
             display_code = f"{current_code[:3]} {current_code[3:]}"
             bar_class = "progress-bar warning-mode" if time_remaining <= 5 else "progress-bar"
             
-            # ★ここが修正ポイント！ textwrap.dedent で空白を除去します
+            # HTML構築（ボリューム増・アニメーション対応）
             html = textwrap.dedent(f"""
             <div class="hero-container">
-                <div class="hero-label">Shared Access Token</div>
+                <div class="hero-label">Titanium Security Layer</div>
                 <div class="hero-code">{display_code}</div>
+                
                 <div class="progress-wrapper">
                     <div class="{bar_class}" style="width: {progress_percent}%;"></div>
                 </div>
-                <div style="color: #86868b; font-size: 0.8rem;">
-                    Auto-refreshing in {int(time_remaining)}s
+                
+                <div style="color: #86868b; font-size: 0.9rem; font-weight: 500; letter-spacing: 0.5px;">
+                    SYNCING WITH SECURE ENCLAVE: <span style="color:#fff;">{int(time_remaining)}s</span>
                 </div>
             </div>
             
-            <div class="tips-header">Campus Hacks</div>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
-                <div class="feature-card">
-                    <div class="feature-icon">📸</div>
-                    <div class="feature-title">Math Vision</div>
-                    <div class="feature-desc">手書き数式や教科書の写真を撮影してアップロード。一瞬でLaTeXコードに変換します。</div>
-                    <div class="feature-cmd">Prompt: "これをLaTeXにして"</div>
+            <div>
+                <div class="grid-header">Engineering Intelligence.</div>
+                <div class="grid-sub">
+                    機械工学科の課題・実験・研究をハックする6つのAIプロンプト。<br>
+                    授業で使える具体的なユースケースをプリセット。
                 </div>
-                <div class="feature-card">
-                    <div class="feature-icon">📊</div>
-                    <div class="feature-title">Graph Reverse</div>
-                    <div class="feature-desc">論文のグラフ画像から、プロットデータ(CSV)を復元・抽出。実験データの比較検討に最適。</div>
-                    <div class="feature-cmd">Prompt: "このグラフをCSVにして"</div>
+            </div>
+            
+            <div class="bento-grid">
+                
+                <div class="feature-card delay-1">
+                    <div>
+                        <div class="feature-icon">📸</div>
+                        <div class="feature-title">Math Vision to LaTeX</div>
+                        <div class="feature-desc">
+                            板書や教科書の複雑な数式（積分・偏微分・行列）をスマホで撮影してアップロードするだけ。
+                            一瞬でレポートに貼り付け可能なLaTeXコードに変換します。手打ちの時間をゼロに。
+                        </div>
+                        <div class="use-case">
+                            Use for: 流体力学のナビエ・ストークス方程式、熱力学の偏微分、制御工学のブロック線図数式化
+                        </div>
+                    </div>
+                    <div class="feature-cmd">"この画像を解析して、Overleafに貼れるLaTeXコードを出力して"</div>
                 </div>
-                <div class="feature-card">
-                    <div class="feature-icon">⚙️</div>
-                    <div class="feature-title">Code Converter</div>
-                    <div class="feature-desc">授業のMATLABコードをPython(NumPy)へ移植。デバッグも同時に完了。</div>
-                    <div class="feature-cmd">Prompt: "MATLABをPythonにして"</div>
+                
+                <div class="feature-card delay-2">
+                    <div>
+                        <div class="feature-icon">📊</div>
+                        <div class="feature-title">Graph Reverse Eng.</div>
+                        <div class="feature-desc">
+                            論文のPDFや参考書のグラフ画像を解析し、元のプロットデータ（CSV数値）を復元・抽出します。
+                            先行研究と自分の実験データをExcelやPythonで重ね合わせたい時に必須の機能です。
+                        </div>
+                        <div class="use-case">
+                            Use for: 材料力学のS-N曲線比較、エンジンのトルク線図、実験レポートの考察作成
+                        </div>
+                    </div>
+                    <div class="feature-cmd">"このグラフ画像のプロットデータを抽出し、CSV形式で出力して"</div>
                 </div>
+                
+                <div class="feature-card delay-3">
+                    <div>
+                        <div class="feature-icon">🐍</div>
+                        <div class="feature-title">Polyglot Converter</div>
+                        <div class="feature-desc">
+                            授業で指定されたMATLABコードを、使い慣れたPython (NumPy/SciPy) に完全移植します。
+                            逆に、Pythonで書いたシミュレーションを提出用にC言語やFortranに書き換えることも可能です。
+                        </div>
+                        <div class="use-case">
+                            Use for: 制御工学演習、数値解析の課題、研究室の過去遺産コードの解読
+                        </div>
+                    </div>
+                    <div class="feature-cmd">"このMATLABコードをPythonに変換し、ライブラリの依存関係も教えて"</div>
+                </div>
+
+                <div class="feature-card delay-4">
+                    <div>
+                        <div class="feature-icon">🧪</div>
+                        <div class="feature-title">Error Propagation</div>
+                        <div class="feature-desc">
+                            実験レポート最大の難所「誤差伝播」の計算を自動化。
+                            測定式と各変数の誤差範囲（±0.05mmなど）を入力すれば、偏微分を用いた最終的な誤差を算出します。
+                        </div>
+                        <div class="use-case">
+                            Use for: 物理学実験、機械加工精度の測定、熱伝導率の測定レポート
+                        </div>
+                    </div>
+                    <div class="feature-cmd">"この式の誤差伝播を計算して。測定値x=10±0.1, y=5±0.05とする"</div>
+                </div>
+
+                <div class="feature-card delay-5">
+                    <div>
+                        <div class="feature-icon">📐</div>
+                        <div class="feature-title">Dimensional Check</div>
+                        <div class="feature-desc">
+                            複雑な物理式の左辺と右辺で、次元（単位）が整合しているかをAIが解析・検算します。
+                            レイノルズ数やヌセルト数などの無次元数が正しく構成されているかのチェックにも最適です。
+                        </div>
+                        <div class="use-case">
+                            Use for: 伝熱工学の式変形チェック、流体解析の境界条件設定、単位換算ミス防止
+                        </div>
+                    </div>
+                    <div class="feature-cmd">"この式の両辺の次元解析を行い、物理的に正しいか検証して"</div>
+                </div>
+
+                <div class="feature-card delay-6">
+                    <div>
+                        <div class="feature-icon">📝</div>
+                        <div class="feature-title">Academic Polish</div>
+                        <div class="feature-desc">
+                            深夜に書き殴った支離滅裂な文章を、提出に耐えうる「学術的かつ論理的な日本語（である調）」に推敲・校正します。
+                            接続詞の使い方や受動態・能動態のバランスも整えます。
+                        </div>
+                        <div class="use-case">
+                            Use for: 最終レポートの「考察」、卒業論文の草稿、学会の予稿作成
+                        </div>
+                    </div>
+                    <div class="feature-cmd">"この文章を、機械工学の実験レポートとして適切な学術的文章にリライトして"</div>
+                </div>
+            </div>
+            
+            <div style="text-align: center; margin-top: 80px; color: #333; font-size: 0.8rem; padding-bottom: 20px;">
+                Designed for Mechanical Engineering Students. v5.0 Titanium Pro Max
             </div>
             """)
             
