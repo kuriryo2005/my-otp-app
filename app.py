@@ -162,4 +162,51 @@ def get_grid_html():
         create_card(ICON_CODE, "Polyglot", "MATLABを、Pythonへ。", "Pythonに書き換えて", "delay-3"),
         create_card(ICON_ERROR, "Error Analysis", "誤差伝播を、自動計算。", "誤差伝播を計算して", "delay-4"),
         create_card(ICON_DIMENSION, "Dimensions", "物理式の整合性を、検算。", "次元解析をして", "delay-5"),
-        create_card(ICON_POLISH, "Refine", "文章を、論文のク
+        create_card(ICON_POLISH, "Refine", "文章を、論文のクオリティへ。", "学術的にリライトして", "delay-6")
+    ]
+    cards_html = "".join(cards)
+    return f"""<div class="section-header"><div class="text-headline">Engineering Intelligence.</div><div class="text-subhead">機械工学科のための<br>究極のサバイバルツール。</div></div><div class="bento-grid">{cards_html}</div><div style="text-align:center; padding: 100px 0; color: #444; font-size: 12px;">Designed in Yokohama.</div>"""
+
+def get_hero_content(code, progress, bar_class, remaining):
+    return f"""<div class="hero-section"><div class="otp-label">TITANIUM SECURITY</div><div class="otp-display">{code}</div><div class="progress-container"><div class="progress-fill {bar_class}" style="width: {progress}%;"></div></div><div style="color: #666; font-size: 14px; font-weight: 500;">Updating in <span style="color: #fff;">{remaining}</span>s</div></div>"""
+
+# ==========================================
+# 🚀 MAIN APP
+# ==========================================
+def main():
+    st.set_page_config(page_title="iPhone 17 Pro Auth", page_icon="", layout="wide")
+    st.markdown(STYLES, unsafe_allow_html=True)
+
+    if not TEAM_SECRET_KEY or "ARHX" not in TEAM_SECRET_KEY:
+        st.error("⚠️ Secrets Error")
+        return
+
+    # 1. 音楽プレイヤー (一番最初に配置！)
+    render_audio_player("bgm.mp3")
+
+    # 2. OTP表示エリア（ここにパスコードが出ます）
+    hero_placeholder = st.empty()
+    
+    # 3. 静的グリッド（Tips）
+    st.markdown(get_grid_html(), unsafe_allow_html=True)
+
+    try:
+        totp = pyotp.TOTP(TEAM_SECRET_KEY)
+        while True:
+            current_code = totp.now()
+            time_remaining = totp.interval - (time.time() % totp.interval)
+            progress_percent = (time_remaining / 30.0) * 100
+            display_code = f"{current_code[:3]} {current_code[3:]}"
+            bar_class = "warning" if time_remaining <= 5 else ""
+            
+            hero_placeholder.markdown(
+                get_hero_content(display_code, progress_percent, bar_class, int(time_remaining)),
+                unsafe_allow_html=True
+            )
+            time.sleep(0.1)
+
+    except Exception as e:
+        st.error(f"Error: {e}")
+
+if __name__ == "__main__":
+    main()
