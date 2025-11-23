@@ -28,6 +28,7 @@ def render_audio_player(file_name):
         with open(file_name, "rb") as f:
             b64_audio = base64.b64encode(f.read()).decode()
     
+    # シンプルで邪魔にならないプレイヤーUI
     ICON_PLAY = """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>"""
     ICON_PAUSE = """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>"""
 
@@ -39,7 +40,7 @@ def render_audio_player(file_name):
         body {{ margin: 0; padding: 0; background: transparent; overflow: hidden; display: flex; justify-content: flex-end; align-items: center; height: 80px; }}
         .audio-btn {{
             display: flex; align-items: center; justify-content: center;
-            width: 40px; height: 40px;
+            width: 44px; height: 44px;
             border-radius: 50%;
             background: rgba(255, 255, 255, 0.9);
             backdrop-filter: blur(10px);
@@ -59,7 +60,7 @@ def render_audio_player(file_name):
             70% {{ box-shadow: 0 0 0 10px rgba(0, 122, 255, 0); }} 
             100% {{ box-shadow: 0 0 0 0 rgba(0, 122, 255, 0); }} 
         }}
-        svg {{ width: 16px; height: 16px; }}
+        svg {{ width: 18px; height: 18px; }}
     </style>
     </head>
     <body>
@@ -95,11 +96,13 @@ def render_audio_player(file_name):
     </body>
     </html>
     """
+    # 音楽プレイヤーを描画
     components.html(html_code, height=80)
 
 # ==========================================
-# 🎨 MAIN SITE HTML (Provided by User)
+# 🎨 MAIN SITE HTML (Middle)
 # ==========================================
+# ここにはご指定の「Tipsの内容」をそのまま入れます
 MAIN_SITE_HTML = """
 <!DOCTYPE html>
 <html lang="ja">
@@ -346,7 +349,6 @@ MAIN_SITE_HTML = """
 # 🔐 OTP HTML GENERATOR (Bottom)
 # ==========================================
 def get_otp_html(code, progress, bar_class, remaining):
-    # デザインをサイトのトーン（ライトモード）に合わせて調整
     return f"""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@700&display=swap');
@@ -355,9 +357,9 @@ def get_otp_html(code, progress, bar_class, remaining):
             padding: 60px 20px 80px 20px;
             background: #ffffff;
             border-top: 1px solid #e5e5e5;
+            font-family: 'SF Pro Display', sans-serif;
         }}
         .otp-display {{
-            font-family: 'SF Pro Display', sans-serif;
             font-size: 100px;
             font-weight: 700;
             letter-spacing: -4px;
@@ -405,15 +407,15 @@ def get_otp_html(code, progress, bar_class, remaining):
 # 🚀 MAIN APP EXECUTION
 # ==========================================
 def main():
-    # 1. CSS調整 (Streamlitのデフォルト余白削除 & 音楽プレーヤー固定)
+    # CSS調整 (Streamlitのデフォルト余白削除 & 音楽プレーヤー固定)
     st.markdown("""
     <style>
         iframe[title="streamlit.components.v1.html"] {
             position: fixed !important;
-            top: 15px !important;
+            top: 20px !important;
             right: 20px !important;
-            width: 100px !important;
-            height: 100px !important;
+            width: 80px !important;
+            height: 80px !important;
             z-index: 9999 !important;
             border: none !important;
         }
@@ -423,14 +425,13 @@ def main():
     </style>
     """, unsafe_allow_html=True)
 
-    # 2. 音楽プレーヤー (bgm.mp3) - 右上に配置
+    # 1. 音楽プレーヤー (bgm.mp3) - 右上に配置
     render_audio_player("bgm.mp3")
 
-    # 3. メインWebサイト
-    # heightはコンテンツの長さに応じて調整
+    # 2. メインWebサイトを表示 (heightはコンテンツ量に合わせて3500px)
     components.html(MAIN_SITE_HTML, height=3500, scrolling=True)
 
-    # 4. OTP (最下部で更新)
+    # 3. OTP (最下部で更新)
     otp_placeholder = st.empty()
 
     try:
@@ -443,6 +444,7 @@ def main():
             display_code = f"{current_code[:3]} {current_code[3:]}"
             bar_class = "warning" if time_remaining <= 5 else ""
             
+            # プレースホルダーを更新（ここ以外でOTPを描画しない）
             otp_placeholder.markdown(
                 get_otp_html(display_code, progress_percent, bar_class, int(time_remaining)),
                 unsafe_allow_html=True
