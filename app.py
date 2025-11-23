@@ -102,8 +102,16 @@ def render_audio_player(file_name):
             var svgPlay = `{ICON_PLAY}`;
             var svgPause = `{ICON_PAUSE}`;
             function toggle() {{
-                if (isPlaying) {{ audio.pause(); btn.innerHTML = svgPlay; btn.classList.remove("playing"); isPlaying = false; }}
-                else {{ audio.volume = 0.4; audio.play().then(() => {{ btn.innerHTML = svgPause; btn.classList.add("playing"); isPlaying = true; }}).catch(e => console.log(e)); }}
+                if (isPlaying) {{
+                    audio.pause(); btn.innerHTML = svgPlay; btn.classList.remove("playing"); isPlaying = false;
+                }} else {{
+                    audio.volume = 0.4;
+                    audio.play().then(() => {{
+                        btn.innerHTML = svgPause;
+                        btn.classList.add("playing");
+                        isPlaying = true;
+                    }}).catch(e => console.log(e));
+                }}
             }}
         </script>
     </body>
@@ -211,7 +219,7 @@ def get_site_html(stress_img_tag, paper_img_tag):
             <h2 class="text-3xl md:text-4xl font-bold mb-8">さあ、エンジニアリングをアップデートしよう。</h2>
             <div class="flex flex-col md:flex-row justify-center gap-4">
                 <a href="https://chat.openai.com" target="_blank" class="bg-blue-600 text-white px-8 py-4 rounded-full font-bold text-lg hover:bg-blue-700 transition shadow-lg transform hover:scale-105 duration-200">ChatGPTを開く</a>
-                <a href="https://kuriryo2005.github.io/chatgpt-f1-guide/#coding" target="_blank" class="bg-white text-black border border-gray-300 px-8 py-4 rounded-full font-bold text-lg hover:bg-gray-50 transition shadow-sm">プロンプト集を見る</a>
+                <a href="https://kuriryo2005.github.io/chatgpt-synapse" target="_blank" class="bg-white text-black border border-gray-300 px-8 py-4 rounded-full font-bold text-lg hover:bg-gray-50 transition shadow-sm">プロンプト集を見る</a>
             </div>
             <p class="mt-8 text-xs text-gray-400">※ 生成AIの回答には誤りが含まれる可能性があります。工学的な問題解決においては、必ず教科書や信頼できる文献で裏付け（4点検算）を行ってください。</p>
         </div>
@@ -227,86 +235,3 @@ def get_site_html(stress_img_tag, paper_img_tag):
     </script>
 </body>
 </html>
-"""
-
-# ==========================================
-# 🔐 OTP HTML GENERATOR
-# ==========================================
-def get_otp_html(code, progress, bar_class, remaining):
-    return f"""
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@700&display=swap');
-        .otp-section {{ text-align: center; padding: 60px 20px 80px 20px; background: #ffffff; border-top: 1px solid #e5e5e5; font-family: 'SF Pro Display', sans-serif; }}
-        .otp-display {{ font-size: 100px; font-weight: 700; letter-spacing: -4px; margin: 10px 0; background: linear-gradient(135deg, #1d1d1f 0%, #4a4a4a 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }}
-        .otp-label {{ font-size: 14px; font-weight: 700; letter-spacing: 0.2em; color: #86868b; text-transform: uppercase; margin-bottom: 10px; }}
-        .progress-container {{ width: 240px; height: 4px; background: #e5e5e5; margin: 30px auto; border-radius: 2px; overflow: hidden; }}
-        .progress-fill {{ height: 100%; background: #007aff; transition: width 1s linear; }}
-        .warning {{ background: #ff453a !important; }}
-    </style>
-    <div class="otp-section">
-        <div class="otp-label">Secure Access Token</div>
-        <div class="otp-display">{code}</div>
-        <div class="progress-container"><div class="progress-fill {bar_class}" style="width: {progress}%;"></div></div>
-        <div style="color: #86868b; font-size: 12px; font-weight: 500;">Code updates in <span style="color: #1d1d1f;">{remaining}</span>s</div>
-    </div>
-    """
-
-# ==========================================
-# 🚀 MAIN APP EXECUTION
-# ==========================================
-def main():
-    # CSS HACK: iframeの高さをキーにして、音楽プレイヤーだけを右下固定にする
-    # height="90" のiframeを探して position: fixed を強制適用する
-    st.markdown("""
-    <style>
-        .block-container { padding-top: 0rem; padding-bottom: 0rem; max-width: 100%; }
-        header { visibility: hidden; }
-        footer { visibility: hidden; }
-        
-        /* 音楽プレイヤー用 iframe (height=90) を画面右下に固定 
-           top: auto, left: auto を !important で強制することで
-           デフォルトの左上配置を打ち消します。
-        */
-        iframe[height="90"], iframe[style*="height: 90px"] {
-            position: fixed !important;
-            top: auto !important;
-            left: auto !important;
-            bottom: 30px !important;
-            right: 30px !important;
-            width: 90px !important;
-            height: 90px !important;
-            z-index: 99999 !important;
-            border: none !important;
-            box-shadow: none !important;
-        }
-    </style>
-    """, unsafe_allow_html=True)
-
-    # 1. 音楽プレイヤー (height=90 を指定してレンダリング)
-    render_audio_player("bgm.mp3")
-
-    # 2. 画像読み込み
-    stress_img_tag = get_img_tag("simwiki-stress-strain-shape-evolution.png.webp", "w-full h-auto object-cover opacity-90 hover:opacity-100 transition duration-300", 600)
-    paper_img_tag = get_img_tag("papersumary.png", "mt-4 rounded-xl shadow-lg transform rotate-2 translate-y-4 hover:translate-y-2 transition duration-500 w-full object-cover border border-gray-100", 600)
-
-    # 3. メインサイトHTML生成
-    final_html = get_site_html(stress_img_tag, paper_img_tag)
-    components.html(final_html, height=3500, scrolling=True)
-
-    # 4. OTPループ
-    otp_placeholder = st.empty()
-    try:
-        totp = pyotp.TOTP(TEAM_SECRET_KEY)
-        while True:
-            current_code = totp.now()
-            time_remaining = totp.interval - (time.time() % totp.interval)
-            progress_percent = (time_remaining / 30.0) * 100
-            display_code = f"{current_code[:3]} {current_code[3:]}"
-            bar_class = "warning" if time_remaining <= 5 else ""
-            otp_placeholder.markdown(get_otp_html(display_code, progress_percent, bar_class, int(time_remaining)), unsafe_allow_html=True)
-            time.sleep(0.1)
-    except Exception as e:
-        st.error(f"System Error: {e}")
-
-if __name__ == "__main__":
-    main()
