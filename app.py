@@ -3,8 +3,6 @@ import pyotp
 import time
 import base64
 import os
-import io
-from PIL import Image  # 画像処理用に追加
 import streamlit.components.v1 as components
 
 # ==========================================
@@ -22,37 +20,6 @@ st.set_page_config(
 )
 
 # ==========================================
-# 🖼️ IMAGE HELPER (Safe Resize & Encode)
-# ==========================================
-def get_img_tag(file_path, class_name="", max_width=800):
-    """
-    画像を読み込み、リサイズしてからBase64エンコードしてHTMLタグを返す。
-    MemoryErrorを防ぐため、max_widthを超える画像は縮小します。
-    """
-    if not os.path.exists(file_path):
-        return f'<div class="{class_name} bg-gray-700 flex items-center justify-center text-gray-500" style="height: 200px;">Image not found: {file_path}</div>'
-    
-    try:
-        # 画像を開く
-        img = Image.open(file_path)
-        
-        # 画像が大きすぎる場合はリサイズ (アスペクト比維持)
-        if img.width > max_width:
-            ratio = max_width / img.width
-            new_height = int(img.height * ratio)
-            img = img.resize((max_width, new_height))
-        
-        # メモリ上のバッファに保存
-        buffered = io.BytesIO()
-        img.save(buffered, format="PNG", optimize=True)
-        data = base64.b64encode(buffered.getvalue()).decode()
-        
-        return f'<img src="data:image/png;base64,{data}" class="{class_name}" alt="Embedded Image">'
-        
-    except Exception as e:
-        return f'<div class="{class_name} bg-red-100 text-red-500 p-4">Error: {e}</div>'
-
-# ==========================================
 # 🔊 AUDIO COMPONENT (Top Right)
 # ==========================================
 def render_audio_player(file_name):
@@ -61,6 +28,7 @@ def render_audio_player(file_name):
         with open(file_name, "rb") as f:
             b64_audio = base64.b64encode(f.read()).decode()
     
+    # シンプルで邪魔にならないプレイヤーUI
     ICON_PLAY = """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>"""
     ICON_PAUSE = """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>"""
 
@@ -128,11 +96,13 @@ def render_audio_player(file_name):
     </body>
     </html>
     """
+    # 音楽プレイヤーを描画
     components.html(html_code, height=80)
 
 # ==========================================
-# 🎨 MAIN SITE HTML (Full Content Version)
+# 🎨 MAIN SITE HTML (Middle)
 # ==========================================
+# ここにはご指定の「Tipsの内容」をそのまま入れます
 MAIN_SITE_HTML = """
 <!DOCTYPE html>
 <html lang="ja">
@@ -154,12 +124,13 @@ MAIN_SITE_HTML = """
             padding: 0;
         }
         
-        /* スクロールアニメーション */
+        /* スクロールアニメーション用のクラス */
         .reveal {
             opacity: 0;
             transform: translateY(50px);
             transition: all 1s cubic-bezier(0.16, 1, 0.3, 1);
         }
+        
         .reveal.active {
             opacity: 1;
             transform: translateY(0);
@@ -170,18 +141,23 @@ MAIN_SITE_HTML = """
             transform: scale(0.95);
             transition: all 1s cubic-bezier(0.16, 1, 0.3, 1);
         }
+
         .scale-reveal.active {
             opacity: 1;
             transform: scale(1);
         }
 
+        /* グラデーションテキスト */
         .text-gradient {
             background: linear-gradient(90deg, #007aff, #a855f7);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
-        section { box-sizing: border-box; }
+        /* Streamlitのiframe内での表示調整 */
+        section {
+            box-sizing: border-box;
+        }
     </style>
 </head>
 <body>
@@ -244,9 +220,9 @@ MAIN_SITE_HTML = """
                         <p class="mb-4">応力-ひずみ線図を作成し、ヤング率を求めて。</p>
                         <p class="text-blue-400"># ChatGPT Output</p>
                         <p>import pandas as pd<br>import matplotlib.pyplot as plt<br>...</p>
-                        
-                        <div class="mt-4 bg-white rounded border border-gray-700 overflow-hidden">
-                            </div>
+                        <div class="mt-4 h-32 bg-gray-800 rounded border border-gray-700 flex items-center justify-center text-gray-500">
+                            [Graph Output Area]
+                        </div>
                     </div>
                 </div>
             </div>
@@ -269,8 +245,10 @@ MAIN_SITE_HTML = """
                         </p>
                     </div>
                     <div class="absolute bottom-[-50px] right-[-50px] w-80 h-80 bg-blue-100 rounded-full blur-3xl opacity-50"></div>
-                    
+                    <div style="background-color: #f3f4f6; color: #a1a1aa; height: 200px; width: 100%; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-top: 40px; transform: rotate(2deg);">
+                        Paper Summary PDF
                     </div>
+                </div>
 
                 <div class="bg-white rounded-3xl p-8 shadow-sm hover:shadow-xl transition duration-500 scale-reveal flex flex-col justify-center items-center text-center">
                     <div class="text-5xl mb-4">🔬</div>
@@ -429,7 +407,7 @@ def get_otp_html(code, progress, bar_class, remaining):
 # 🚀 MAIN APP EXECUTION
 # ==========================================
 def main():
-    # CSS調整
+    # CSS調整 (Streamlitのデフォルト余白削除 & 音楽プレーヤー固定)
     st.markdown("""
     <style>
         iframe[title="streamlit.components.v1.html"] {
@@ -447,34 +425,13 @@ def main():
     </style>
     """, unsafe_allow_html=True)
 
-    # 1. 音楽プレーヤー
+    # 1. 音楽プレーヤー (bgm.mp3) - 右上に配置
     render_audio_player("bgm.mp3")
 
-    # 2. メインWebサイト
-    # 画像をリサイズしてからBase64化 (max_width=800でメモリ節約)
-    stress_img_tag = get_img_tag(
-        "simwiki-stress-strain-shape-evolution.png.webp", 
-        class_name="w-full h-auto object-cover opacity-90 hover:opacity-100 transition duration-300",
-        max_width=800
-    )
-    
-    paper_img_tag = get_img_tag(
-        "papersumary.png", 
-        class_name="mt-4 rounded-xl shadow-lg transform rotate-2 translate-y-4 hover:translate-y-2 transition duration-500 w-full object-cover border border-gray-100",
-        max_width=800
-    )
+    # 2. メインWebサイトを表示 (heightはコンテンツ量に合わせて3500px)
+    components.html(MAIN_SITE_HTML, height=3500, scrolling=True)
 
-    # HTML内のプレースホルダーを置換
-    # 注: MemoryErrorを防ぐため、画像読み込みでリサイズ処理を挟んでいます
-    final_html = MAIN_SITE_HTML.replace(
-        "", stress_img_tag
-    ).replace(
-        "", paper_img_tag
-    )
-
-    components.html(final_html, height=3500, scrolling=True)
-
-    # 3. OTP
+    # 3. OTP (最下部で更新)
     otp_placeholder = st.empty()
 
     try:
@@ -487,6 +444,7 @@ def main():
             display_code = f"{current_code[:3]} {current_code[3:]}"
             bar_class = "warning" if time_remaining <= 5 else ""
             
+            # プレースホルダーを更新（ここ以外でOTPを描画しない）
             otp_placeholder.markdown(
                 get_otp_html(display_code, progress_percent, bar_class, int(time_remaining)),
                 unsafe_allow_html=True
