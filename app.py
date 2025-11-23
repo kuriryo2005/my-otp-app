@@ -1,197 +1,216 @@
 import streamlit as st
-import pyotp
-import time
-import base64
-import os
+from pathlib import Path
 
-# ==========================================
-# ⚙️ SETTINGS
-# ==========================================
-try:
-    TEAM_SECRET_KEY = st.secrets["TEAM_SECRET_KEY"]
-except:
-    TEAM_SECRET_KEY = "ARHXCWTVFU54ITHIXS4Q76SVCDFLC5TU"
 
-# ==========================================
-# 💎 SVG ICONS
-# ==========================================
-ICON_MATH = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>"""
-ICON_GRAPH = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>"""
-ICON_CODE = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>"""
-ICON_ERROR = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>"""
-ICON_DIMENSION = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>"""
-ICON_POLISH = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>"""
+def load_image(image_path: Path):
+    """Read image file into bytes for display."""
+    return image_path.read_bytes()
 
-ICON_PLAY = """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>"""
-ICON_PAUSE = """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>"""
 
-# ==========================================
-# 🔊 ROBUST AUDIO ENGINE (Global Scope)
-# ==========================================
-def get_audio_html(file_name):
-    if not os.path.exists(file_name):
-        return ""
-    
-    with open(file_name, "rb") as f:
-        b64_audio = base64.b64encode(f.read()).decode()
-    
-    # Pythonの変数をJSに渡すためのID
-    return f"""
-    <div id="global-sound-btn" class="sound-fab" onclick="window.toggleGlobalAudio()">
-        <div id="global-icon-box">{ICON_PLAY}</div>
-    </div>
-
-    <script>
-    // 1. グローバル領域にオーディオが存在しなければ作成（これが永続化のキモ）
-    if (!window.globalAudio) {{
-        window.globalAudio = new Audio("data:audio/mp3;base64,{b64_audio}");
-        window.globalAudio.loop = true;
-        window.globalAudio.volume = 0.5;
-        window.isAudioPlaying = false;
-    }}
-
-    // 2. アイコン定数の定義
-    const SVG_PLAY = `{ICON_PLAY}`;
-    const SVG_PAUSE = `{ICON_PAUSE}`;
-
-    // 3. 再生トグル関数（グローバル登録）
-    window.toggleGlobalAudio = function() {{
-        const btn = document.getElementById("global-sound-btn");
-        const iconBox = document.getElementById("global-icon-box");
-
-        if (window.isAudioPlaying) {{
-            window.globalAudio.pause();
-            iconBox.innerHTML = SVG_PLAY;
-            if(btn) btn.classList.remove("is-active");
-            window.isAudioPlaying = false;
-        }} else {{
-            window.globalAudio.play().then(() => {{
-                iconBox.innerHTML = SVG_PAUSE;
-                if(btn) btn.classList.add("is-active");
-                window.isAudioPlaying = true;
-            }}).catch(e => console.error("Audio Error:", e));
-        }}
-    }};
-
-    // 4. 画面更新時の状態復元（リロード対策）
-    // Pythonが画面を書き換えても、JSの状態を見てボタンの見た目を戻す
-    setTimeout(() => {{
-        const btn = document.getElementById("global-sound-btn");
-        const iconBox = document.getElementById("global-icon-box");
-        if (window.isAudioPlaying && btn && iconBox) {{
-            btn.classList.add("is-active");
-            iconBox.innerHTML = SVG_PAUSE;
-        }}
-    }}, 100);
-    </script>
-    """
-
-# ==========================================
-# 🎨 CSS STYLES
-# ==========================================
-STYLES = """
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=SF+Pro+Display&display=swap');
-
-.stApp { background-color: #000; background: #050507; color: #f5f5f7; font-family: "SF Pro Display", sans-serif; overflow-x: hidden; }
-header, footer { visibility: hidden; }
-.block-container { padding-top: 4rem; padding-bottom: 10rem; max-width: 1000px; }
-
-/* Sound FAB */
-.sound-fab {
-    position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px;
-    background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer; z-index: 999999; color: #fff; transition: all 0.3s ease;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-}
-.sound-fab:hover { transform: scale(1.1); background: rgba(255, 255, 255, 0.3); }
-@keyframes pulseGreen { 0% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(46, 204, 113, 0); } 100% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); } }
-.sound-fab.is-active { background: #2ecc71; border-color: #2ecc71; color: #000; animation: pulseGreen 2s infinite; }
-
-/* Hero */
-.hero-section { text-align: center; margin-bottom: 100px; padding: 60px 20px; }
-.otp-display { font-size: 160px; font-weight: 700; letter-spacing: -6px; margin: 20px 0; background: linear-gradient(135deg, #fff 0%, #8a8a8e 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; color: #e0e0e0; }
-.otp-label { font-size: 14px; font-weight: 600; letter-spacing: 0.2em; color: #d59464; margin-bottom: 10px; }
-.progress-container { width: 240px; height: 4px; background: #333; margin: 40px auto; border-radius: 2px; overflow: hidden; }
-.progress-fill { height: 100%; background: #fff; transition: width 1s linear; }
-.warning { background: #ff453a !important; }
-
-/* Grid */
-.section-header { margin-top: 80px; margin-bottom: 60px; padding: 0 20px; }
-.text-headline { font-size: 56px; font-weight: 600; margin-bottom: 20px; }
-.text-subhead { font-size: 28px; color: #86868b; }
-.bento-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; padding: 0 20px; }
-.bento-card { background: #101010; border-radius: 30px; padding: 40px 36px; height: 450px; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid #1d1d1f; }
-.bento-card:hover { transform: scale(1.02); background: #151515; border-color: #333; transition: transform 0.3s ease; }
-.card-icon-box { width: 60px; height: 60px; margin-bottom: 25px; background: rgba(255,255,255,0.05); border-radius: 16px; display: flex; align-items: center; justify-content: center; }
-.card-icon-box svg { width: 32px; height: 32px; }
-.card-title { font-size: 28px; font-weight: 700; color: #f5f5f7; margin-bottom: 12px; }
-.card-desc { font-size: 17px; line-height: 1.5; color: #86868b; }
-.card-cmd { margin-top: auto; font-family: monospace; font-size: 13px; color: #fff; background: rgba(255,255,255,0.1); padding: 16px; border-radius: 16px; }
-</style>
-"""
-
-# ==========================================
-# 🧱 COMPONENTS
-# ==========================================
-def create_card(svg_icon, title, desc, cmd):
-    return f"""<div class="bento-card"><div><div class="card-icon-box">{svg_icon}</div><div class="card-title">{title}</div><div class="card-desc">{desc}</div></div><div class="card-cmd">"{cmd}"</div></div>"""
-
-def get_static_content():
-    cards = [
-        create_card(ICON_MATH, "Math Vision", "板書の数式を、一瞬でLaTeXに。", "この画像をLaTeXにして"),
-        create_card(ICON_GRAPH, "Graph Reverse", "論文のグラフから、データを復元。", "このグラフをCSVにして"),
-        create_card(ICON_CODE, "Polyglot", "MATLABを、Pythonへ。", "Pythonに書き換えて"),
-        create_card(ICON_ERROR, "Error Analysis", "誤差伝播を、自動計算。", "誤差伝播を計算して"),
-        create_card(ICON_DIMENSION, "Dimensions", "物理式の整合性を、検算。", "次元解析をして"),
-        create_card(ICON_POLISH, "Refine", "文章を、論文のクオリティへ。", "学術的にリライトして")
-    ]
-    cards_html = "".join(cards)
-    
-    # 音声プレーヤーの読み込み
-    audio_player = get_audio_html("bgm.mp3")
-    
-    return f"""
-    {audio_player}
-    <div class="section-header"><div class="text-headline">Engineering Intelligence.</div><div class="text-subhead">機械工学科のための<br>究極のサバイバルツール。</div></div><div class="bento-grid">{cards_html}</div><div style="text-align:center; padding: 100px 0; color: #444; font-size: 12px;">Designed in Yokohama.</div>
-    """
-
-def get_hero_content(code, progress, bar_class, remaining):
-    return f"""<div class="hero-section"><div class="otp-label">TITANIUM SECURITY</div><div class="otp-display">{code}</div><div class="progress-container"><div class="progress-fill {bar_class}" style="width: {progress}%;"></div></div><div style="color: #666; font-size: 14px; font-weight: 500;">Updating in <span style="color: #fff;">{remaining}</span>s</div></div>"""
-
-# ==========================================
-# 🚀 MAIN APP
-# ==========================================
 def main():
-    st.set_page_config(page_title="iPhone 17 Pro Auth", page_icon="", layout="wide")
-    st.markdown(STYLES, unsafe_allow_html=True)
+    st.set_page_config(
+        page_title="ChatGPTの便利な使い方", page_icon="🤖", layout="wide"
+    )
 
-    if not TEAM_SECRET_KEY or "ARHX" not in TEAM_SECRET_KEY:
-        st.error("⚠️ Secrets Error")
-        return
+    # Load assets
+    base_dir = Path(__file__).resolve().parent
+    hero_img = load_image(base_dir / "b94d9ec5-df2d-479a-9e70-9fc08847c458.png")
 
-    hero_placeholder = st.empty()
-    st.markdown(get_static_content(), unsafe_allow_html=True)
+    # Sidebar navigation
+    page = st.sidebar.selectbox(
+        "ナビゲーション",
+        [
+            "ホーム",
+            "機械工学科向け",
+            "一般大学生向け",
+            "ガイドラインと注意点",
+            "まとめ",
+        ],
+    )
 
-    try:
-        totp = pyotp.TOTP(TEAM_SECRET_KEY)
-        while True:
-            current_code = totp.now()
-            time_remaining = totp.interval - (time.time() % totp.interval)
-            progress_percent = (time_remaining / 30.0) * 100
-            display_code = f"{current_code[:3]} {current_code[3:]}"
-            bar_class = "warning" if time_remaining <= 5 else ""
-            
-            hero_placeholder.markdown(
-                get_hero_content(display_code, progress_percent, bar_class, int(time_remaining)),
-                unsafe_allow_html=True
+    # Common styles injected via markdown
+    st.markdown(
+        """
+        <style>
+        /* Global typography and colours inspired by Apple's clean aesthetic */
+        body, html {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+        .hero {
+            position: relative;
+            width: 100%;
+            height: 70vh;
+            overflow: hidden;
+        }
+        .hero img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            filter: brightness(0.6);
+        }
+        .hero-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            text-align: center;
+            animation: fadeInUp 1.5s ease-out forwards;
+            opacity: 0;
+        }
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translate3d(-50%, -40%, 0);
+            }
+            to {
+                opacity: 1;
+                transform: translate3d(-50%, -50%, 0);
+            }
+        }
+        .section {
+            padding: 3rem 1rem;
+            margin: 0 auto;
+            max-width: 900px;
+        }
+        .section h2 {
+            margin-bottom: 1rem;
+        }
+        .section p {
+            line-height: 1.6;
+        }
+        /* Responsive text */
+        h1, h2, h3 {
+            font-weight: 600;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    if page == "ホーム":
+        # Hero section with image and overlayed text
+        st.markdown(
+            f"""
+            <div class="hero">
+                <img src="data:image/png;base64,{hero_img.hex()}" alt="hero background" />
+                <div class="hero-text">
+                    <h1>ChatGPTの便利な使い方</h1>
+                    <h2>機械工学科・大学生</h2>
+                    <p>未来の学習をAIで</p>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        st.write("\n")
+        # Introduction section
+        with st.container():
+            st.subheader("はじめに")
+            st.write(
+                """
+                ChatGPTはOpenAIによって開発された対話型AIで、自然な文章を生成する能力を持ちます。本サイトでは、機械システム工学科の学生や一般的な大学生が
+                ChatGPTを学習や研究に役立てるための具体的な方法を紹介します。簡単な質問から専門的な解説まで、幅広い活用方法を体験しながら学んでください。
+                """
             )
-            time.sleep(0.1)
+            # Trigger a small animation on the home page
+            st.balloons()
 
-    except Exception as e:
-        st.error(f"Error: {e}")
+    elif page == "機械工学科向け":
+        st.header("機械工学科の学生のためのChatGPT活用法")
+        st.write(
+            """
+            機械設計や加工、実験に携わる学生にとって、ChatGPTは補助的なツールとして様々な場面で役立ちます。以下にその例を示します：
+            """
+        )
+        # Use bullet points with icons
+        st.markdown(
+            """
+            - **設計アイデアの発想支援**：プロンプトに条件や制約を入力すると、設計の方向性や考え方を提案してくれます。\
+              ChatGPTは例えば材料の組み合わせや構造の特徴を列挙することでアイデア出しをサポートします。
+            - **技術文献の要約**：英語の論文や技術資料を貼り付けると、主要なポイントを日本語で要約してくれるので、研究の背景調査が効率化します。
+            - **計算やプログラミング補助**：PythonやMATLABの簡単なコード例を提示させることで、数値解析やシミュレーションの出発点を得ることができます。\
+              ただし、数式の具体的な計算では誤りが含まれる可能性があるため必ず手計算や既存の教科書で検証してください【{}†L63-L70】。
+            - **設計報告書の構成案**：報告書やレポートの章立てを提案してもらい、自分の考えを整理する手助けにします。
+            - **CAD・CAEのコマンドや用語の理解**：専門的なソフトウェアの操作に関する基本的な質問に答えてくれますが、最新バージョンの仕様は常に公式ドキュメントで確認しましょう。
+            """.format(
+                "402173064024730"
+            ),
+            unsafe_allow_html=True,
+        )
+        st.info(
+            "AIを利用して回答を得た場合でも、結果を鵜呑みにせず、必ず自分で検証する姿勢が重要です。"
+        )
+
+    elif page == "一般大学生向け":
+        st.header("一般大学生のためのChatGPT活用法")
+        st.write(
+            """
+            理系・文系を問わず、大学生にとってChatGPTは学習を効率化する強力なアシスタントです。以下はその具体例です：
+            """
+        )
+        st.markdown(
+            """
+            - **講義や試験勉強のリサーチ**：授業で分からないキーワードや概念を自然言語で質問し、情報収集の手間を削減できます【{}†L85-L91】。
+            - **英語記事の要約・翻訳**：英語文献を貼り付けると要約や翻訳を生成し、国際的な文献を素早く理解できます【{}†L90-L94】。
+            - **文章添削と改善**：自分が書いた英文や日本語の文章を添削させ、読みやすい表現に改善できます【{}†L95-L100】。
+            - **アイデア出し**：レポートや研究テーマ、サークル活動の企画などで複数のアイデアを提案してもらえます【{}†L100-L104】。
+            - **プログラミングサポート**：特定の課題を伝えることで、簡単なスクリプトやアルゴリズムの例を得ることができます【{}†L107-L110】。
+            """.format(
+                "510223605288538",
+                "510223605288538",
+                "510223605288538",
+                "510223605288538",
+                "510223605288538",
+            ),
+            unsafe_allow_html=True,
+        )
+        st.info(
+            "ChatGPTの回答は完璧ではありません。信頼性を確認しながら活用し、同じ質問でもプロンプトを変えて比較検討することが重要です。"
+        )
+
+    elif page == "ガイドラインと注意点":
+        st.header("大学での生成AI利用のガイドライン")
+        st.write(
+            """
+            文部科学省は大学・高専における生成AIの取り扱いについてガイドラインを示しており、ChatGPTの利用が効果的とされる場面と留意すべき点を挙げています【{}†L116-L135】。
+            """.format("793708520506121"),
+        )
+        st.markdown(
+            """
+            **推奨される活用場面**：
+            
+            - ブレインストーミングや論点の洗い出しによる学習支援
+            - 情報収集・文章構成・翻訳・プログラミング補助などの学びの補助
+            - 教員による教材開発や大学事務の効率化
+            
+            **留意点**：
+            
+            - 学習活動との関係や成績評価をどう扱うか
+            - 生成物の虚偽情報や著作権侵害に注意する
+            - 個人情報や機密情報の取り扱いに十分配慮する
+            
+            これらのポイントを踏まえ、ChatGPTを「学びを深める道具」として利用し、自身の考えを整理する助けとすることが重要です【{}†L33-L48】。
+            """.format("793708520506121", "432405058487231"),
+            unsafe_allow_html=True,
+        )
+        st.info(
+            "どの学科でも、生成AIの技術的限界や倫理的課題を理解したうえで、主体的に利用していくことが求められます。"
+        )
+
+    else:  # まとめ
+        st.header("まとめ")
+        st.write(
+            """
+            ChatGPTは、機械工学や他の分野の学生にとって大きな助けとなるツールです。情報収集やアイデア出しの時間を短縮し、学習効率を高める一方で、
+            生成される情報の信頼性や倫理面への配慮も欠かせません。常に元となる資料で確認し、自分の言葉でまとめる姿勢を心がけてください。
+            """
+        )
+        # Concluding animation for fun
+        if st.button("🎉 お疲れさまでした！クリックしてお祝い"):
+            st.snow()
+            st.write("ご覧いただきありがとうございました！")
+
 
 if __name__ == "__main__":
     main()
