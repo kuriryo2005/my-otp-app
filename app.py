@@ -25,11 +25,16 @@ st.set_page_config(
 # 🖼️ IMAGE HELPER (Memory Safe)
 # ==========================================
 def get_img_tag(file_path, class_name="", max_width=600):
+    """
+    画像を読み込み、HTMLタグを返す。
+    メモリ不足を防ぐため、PILでリサイズしてからBase64化する。
+    """
     if not os.path.exists(file_path):
         return f'<div class="{class_name} bg-gray-200 flex items-center justify-center text-gray-500" style="min-height: 200px;">Image not found</div>'
     
     try:
         img = Image.open(file_path)
+        # リサイズ処理 (アスペクト比維持)
         if img.width > max_width:
             ratio = max_width / img.width
             new_height = int(img.height * ratio)
@@ -44,23 +49,72 @@ def get_img_tag(file_path, class_name="", max_width=600):
         return f'<div class="{class_name} bg-red-50">Image Error</div>'
 
 # ==========================================
-# 🔊 AUDIO DATA HELPER
+# 🔊 AUDIO COMPONENT (Bottom Right)
 # ==========================================
-def get_b64_audio(file_name):
+def render_audio_player(file_name):
+    b64_audio = ""
     if os.path.exists(file_name):
         with open(file_name, "rb") as f:
-            return base64.b64encode(f.read()).decode()
-    return ""
-
-# ==========================================
-# 🎨 HTML GENERATOR (Merged Audio & Site)
-# ==========================================
-def get_site_html(stress_img_tag, paper_img_tag, b64_audio):
+            b64_audio = base64.b64encode(f.read()).decode()
     
-    # 音楽プレイヤーのアイコン定義
     ICON_PLAY = """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>"""
     ICON_PAUSE = """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>"""
 
+    html_code = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <style>
+        /* コンテナ自体のスタイル: 右下に配置しやすいよう調整 */
+        body {{ margin: 0; padding: 0; background: transparent; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 80px; width: 80px; }}
+        
+        .audio-btn {{
+            display: flex; align-items: center; justify-content: center;
+            width: 56px; height: 56px; /* 少し大きめに */
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.8); /* ガラス感 */
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            color: #333; cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15); /* 浮遊感を強調 */
+        }}
+        .audio-btn:hover {{ 
+            transform: translateY(-4px) scale(1.05); /* ホバーで少し浮く */
+            background: #ffffff;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+        }}
+        .audio-btn.playing {{
+            background: #007aff; border-color: #007aff; color: #fff;
+            animation: pulse 2s infinite;
+        }}
+        @keyframes pulse {{ 0% {{ box-shadow: 0 0 0 0 rgba(0, 122, 255, 0.6); }} 70% {{ box-shadow: 0 0 0 16px rgba(0, 122, 255, 0); }} 100% {{ box-shadow: 0 0 0 0 rgba(0, 122, 255, 0); }} }}
+        svg {{ width: 24px; height: 24px; }}
+    </style>
+    </head>
+    <body>
+        <audio id="player" loop><source src="data:audio/mp3;base64,{b64_audio}" type="audio/mp3"></audio>
+        <div id="btn" class="audio-btn" onclick="toggle()">{ICON_PLAY}</div>
+        <script>
+            var audio = document.getElementById("player");
+            var btn = document.getElementById("btn");
+            var isPlaying = false;
+            var svgPlay = `{ICON_PLAY}`;
+            var svgPause = `{ICON_PAUSE}`;
+            function toggle() {{
+                if (isPlaying) {{ audio.pause(); btn.innerHTML = svgPlay; btn.classList.remove("playing"); isPlaying = false; }}
+                else {{ audio.volume = 0.4; audio.play().then(() => {{ btn.innerHTML = svgPause; btn.classList.add("playing"); isPlaying = true; }}).catch(e => console.log(e)); }}
+            }}
+        </script>
+    </body>
+    </html>
+    """
+    components.html(html_code, height=80)
+
+# ==========================================
+# 🎨 HTML GENERATOR (Full Content via f-string)
+# ==========================================
+def get_site_html(stress_img_tag, paper_img_tag):
     return f"""
 <!DOCTYPE html>
 <html lang="ja">
@@ -81,38 +135,6 @@ def get_site_html(stress_img_tag, paper_img_tag, b64_audio):
             margin: 0;
             padding: 0;
         }}
-        
-        /* Audio Player Fixed Style */
-        .audio-widget {{
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            z-index: 9999;
-        }}
-        
-        .audio-btn {{
-            display: flex; align-items: center; justify-content: center;
-            width: 60px; height: 60px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(0, 0, 0, 0.1);
-            color: #333; cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-        }}
-        .audio-btn:hover {{ 
-            transform: scale(1.1); 
-            background: #ffffff;
-            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
-        }}
-        .audio-btn.playing {{
-            background: #007aff; border-color: #007aff; color: #fff;
-            animation: pulse 2s infinite;
-        }}
-        @keyframes pulse {{ 0% {{ box-shadow: 0 0 0 0 rgba(0, 122, 255, 0.6); }} 70% {{ box-shadow: 0 0 0 20px rgba(0, 122, 255, 0); }} 100% {{ box-shadow: 0 0 0 0 rgba(0, 122, 255, 0); }} }}
-        
-        /* Scroll Animations */
         .reveal {{ opacity: 0; transform: translateY(50px); transition: all 1s cubic-bezier(0.16, 1, 0.3, 1); }}
         .reveal.active {{ opacity: 1; transform: translateY(0); }}
         .scale-reveal {{ opacity: 0; transform: scale(0.95); transition: all 1s cubic-bezier(0.16, 1, 0.3, 1); }}
@@ -122,11 +144,6 @@ def get_site_html(stress_img_tag, paper_img_tag, b64_audio):
     </style>
 </head>
 <body>
-
-    <div class="audio-widget">
-        <audio id="player" loop><source src="data:audio/mp3;base64,{b64_audio}" type="audio/mp3"></audio>
-        <div id="btn" class="audio-btn" onclick="toggle()">{ICON_PLAY}</div>
-    </div>
 
     <nav class="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-gray-200 transition-all duration-300" id="navbar">
         <div class="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
@@ -186,6 +203,7 @@ def get_site_html(stress_img_tag, paper_img_tag, b64_audio):
                         <p class="mb-4">応力-ひずみ線図を作成し、ヤング率を求めて。</p>
                         <p class="text-blue-400"># ChatGPT Output</p>
                         <p>import pandas as pd<br>import matplotlib.pyplot as plt<br>...</p>
+                        
                         <div class="mt-4 bg-white rounded border border-gray-700 overflow-hidden">
                             {stress_img_tag}
                         </div>
@@ -211,6 +229,7 @@ def get_site_html(stress_img_tag, paper_img_tag, b64_audio):
                         </p>
                     </div>
                     <div class="absolute bottom-[-50px] right-[-50px] w-80 h-80 bg-blue-100 rounded-full blur-3xl opacity-50"></div>
+                    
                     {paper_img_tag}
                 </div>
 
@@ -287,24 +306,22 @@ def get_site_html(stress_img_tag, paper_img_tag, b64_audio):
     </section>
 
     <script>
-        /* Audio Logic */
-        var audio = document.getElementById("player");
-        var btn = document.getElementById("btn");
-        var isPlaying = false;
-        var svgPlay = `{ICON_PLAY}`;
-        var svgPause = `{ICON_PAUSE}`;
-        function toggle() {{
-            if (isPlaying) {{ audio.pause(); btn.innerHTML = svgPlay; btn.classList.remove("playing"); isPlaying = false; }}
-            else {{ audio.volume = 0.4; audio.play().then(() => {{ btn.innerHTML = svgPause; btn.classList.add("playing"); isPlaying = true; }}).catch(e => console.log(e)); }}
-        }}
-
-        /* Reveal Logic */
         document.addEventListener('DOMContentLoaded', () => {{
-            const observerOptions = {{ threshold: 0.1, rootMargin: "0px 0px -50px 0px" }};
+            const observerOptions = {{
+                threshold: 0.1,
+                rootMargin: "0px 0px -50px 0px"
+            }};
+
             const observer = new IntersectionObserver((entries) => {{
-                entries.forEach(entry => {{ if (entry.isIntersecting) entry.target.classList.add('active'); }});
+                entries.forEach(entry => {{
+                    if (entry.isIntersecting) {{
+                        entry.target.classList.add('active');
+                    }}
+                }});
             }}, observerOptions);
-            document.querySelectorAll('.reveal, .scale-reveal').forEach(el => observer.observe(el));
+
+            const revealElements = document.querySelectorAll('.reveal, .scale-reveal');
+            revealElements.forEach(el => observer.observe(el));
         }});
     </script>
 </body>
@@ -373,17 +390,26 @@ def get_otp_html(code, progress, bar_class, remaining):
 # 🚀 MAIN APP EXECUTION
 # ==========================================
 def main():
-    # Streamlit default style cleanup
+    # CSS Adjustments: 音楽プレイヤーを右下(bottom: 20px, right: 20px)に固定
     st.markdown("""
     <style>
+        iframe[title="streamlit.components.v1.html"] {
+            position: fixed !important;
+            bottom: 20px !important;
+            right: 20px !important;
+            width: 80px !important;
+            height: 80px !important;
+            z-index: 9999 !important;
+            border: none !important;
+        }
         .block-container { padding-top: 0rem; padding-bottom: 0rem; max-width: 100%; }
         header { visibility: hidden; }
         footer { visibility: hidden; }
     </style>
     """, unsafe_allow_html=True)
 
-    # 1. Audio Data
-    b64_audio = get_b64_audio("bgm.mp3")
+    # 1. Audio Player (bgm.mp3)
+    render_audio_player("bgm.mp3")
 
     # 2. Images (Resize & Encode)
     stress_img_tag = get_img_tag(
@@ -398,8 +424,8 @@ def main():
         max_width=600
     )
 
-    # 3. HTML Construction (Audio merged inside)
-    final_html = get_site_html(stress_img_tag, paper_img_tag, b64_audio)
+    # 3. HTML Construction (using f-string to prevent MemoryError)
+    final_html = get_site_html(stress_img_tag, paper_img_tag)
     
     # Render Main Site
     components.html(final_html, height=3500, scrolling=True)
