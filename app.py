@@ -60,11 +60,12 @@ def render_audio_player(file_name):
     <html>
     <head>
     <style>
+        /* iframe内部での配置 */
         body {{ 
             margin: 0; padding: 0; background: transparent; 
             overflow: hidden; 
             display: flex; justify-content: center; align-items: center; 
-            height: 90px; width: 90px; /* iframeサイズに合わせる */
+            height: 90px; width: 90px;
         }}
         
         .audio-btn {{
@@ -108,7 +109,6 @@ def render_audio_player(file_name):
     </body>
     </html>
     """
-    # height=90 はCSSセレクタでこのiframeを特定するために重要です
     components.html(html_code, height=90)
 
 # ==========================================
@@ -145,7 +145,7 @@ def get_site_html(stress_img_tag, paper_img_tag):
     <nav class="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-gray-200 transition-all duration-300" id="navbar">
         <div class="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
             <span class="font-bold text-lg tracking-tight">GenAI <span class="text-gray-500">for Engineers</span></span>
-            <a href="#" class="bg-blue-600 text-white px-4 py-1 rounded-full text-sm font-medium hover:bg-blue-700 transition">使ってみる</a>
+            <a href="https://www.cityheaven.net/kanagawa/A1401/A140103/yokohama_guranopera" target="_blank" class="bg-blue-600 text-white px-4 py-1 rounded-full text-sm font-medium hover:bg-blue-700 transition">使ってみる</a>
         </div>
     </nav>
     <section class="min-h-screen flex flex-col justify-center items-center text-center px-6 pt-20">
@@ -263,23 +263,26 @@ def main():
         header { visibility: hidden; }
         footer { visibility: hidden; }
         
-        /* 音楽プレイヤー用 iframe (height=90) を画面右下に固定 */
-        iframe[height="90"] {
+        /* 音楽プレイヤー用 iframe (height=90) を画面右下に固定 
+           top: auto, left: auto を !important で強制することで
+           デフォルトの左上配置を打ち消します。
+        */
+        iframe[height="90"], iframe[style*="height: 90px"] {
             position: fixed !important;
-            bottom: 30px !important;
-            right: 30px !important;
             top: auto !important;
             left: auto !important;
+            bottom: 30px !important;
+            right: 30px !important;
             width: 90px !important;
             height: 90px !important;
-            z-index: 1000000 !important;
+            z-index: 99999 !important;
             border: none !important;
             box-shadow: none !important;
         }
     </style>
     """, unsafe_allow_html=True)
 
-    # 1. 音楽プレイヤー (別コンポーネントとしてレンダリングし、CSSで配置を制御)
+    # 1. 音楽プレイヤー (height=90 を指定してレンダリング)
     render_audio_player("bgm.mp3")
 
     # 2. 画像読み込み
