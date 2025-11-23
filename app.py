@@ -3,6 +3,7 @@ import pyotp
 import time
 import base64
 import os
+import mimetypes # ファイル形式を正確に判定するライブラリ
 
 # ==========================================
 # ⚙️ SETTINGS
@@ -26,124 +27,159 @@ ICON_PLAY = """<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" vi
 ICON_PAUSE = """<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>"""
 
 # ==========================================
-# 🔊 AUDIO SYSTEM (Diagnostic Mode)
+# 🔊 AUDIO SYSTEM (Absolute Path & MIME Check)
 # ==========================================
-def get_mime_type(file_path):
-    # 拡張子から正しいMIMEタイプを判定
-    ext = os.path.splitext(file_path)[1].lower()
-    if ext == ".mp3": return "audio/mpeg"
-    elif ext == ".wav": return "audio/wav"
-    elif ext == ".ogg": return "audio/ogg"
-    elif ext == ".m4a": return "audio/mp4"
-    elif ext == ".aac": return "audio/aac"
-    return "audio/mpeg" # Default
-
 def get_audio_html(file_name):
-    if not os.path.exists(file_name):
+    # 現在のディレクトリからの絶対パスを取得（確実に見つけるため）
+    abs_path = os.path.abspath(file_name)
+    
+    if not os.path.exists(abs_path):
+        st.error(f"⚠️ サーバー上にファイルが見つかりません: {file_name}")
         return ""
     
-    with open(file_name, "rb") as f:
-        b64_audio = base64.b64encode(f.read()).decode()
+    with open(abs_path, "rb") as f:
+        audio_bytes = f.read()
     
-    mime_type = get_mime_type(file_name)
+    # ファイルサイズが小さすぎる場合は警告
+    if len(audio_bytes) < 1000:
+        st.warning("⚠️ 音楽ファイルのサイズが異常に小さいです（中身が壊れている可能性があります）")
+
+    # 正しいMIMEタイプ（audio/mpegなど）を自動判定
+    mime_type, _ = mimetypes.guess_type(abs_path)
+    if mime_type is None: mime_type = "audio/mp3" # フォールバック
+
+    b64_audio = base64.b64encode(audio_bytes).decode()
     
     return f"""
-    <audio id="global-audio-player" preload="auto" loop>
+    <audio id="bgm-player" loop preload="auto">
         <source src="data:{mime_type};base64,{b64_audio}" type="{mime_type}">
     </audio>
     
-    <div id="debug-status" style="position:fixed; top:10px; right:10px; color:lime; font-family:monospace; font-size:10px; z-index:999999; background:rgba(0,0,0,0.8); padding:5px; display:none;">Ready</div>
-
-    <div id="fab-btn" class="sound-fab" onclick="handleFabClick()">
+    <div id="fab-btn" class="sound-fab">
         <div id="fab-icon">{ICON_PLAY}</div>
     </div>
 
     <script>
-    window.audioEl = document.getElementById("global-audio-player");
-    window.fabBtn = document.getElementById("fab-btn");
-    window.fabIcon = document.getElementById("fab-icon");
-    window.debugStatus = document.getElementById("debug-status");
-    
-    const SVG_PLAY = `{ICON_PLAY}`;
-    const SVG_PAUSE = `{ICON_PAUSE}`;
-
-    window.handleFabClick = function() {{
-        // デバッグ表示ON
-        window.debugStatus.style.display = "block";
+    (function() {{
+        var audio = document.getElementById("bgm-player");
+        var btn = document.getElementById("fab-btn");
+        var iconBox = document.getElementById("fab-icon");
+        var isPlaying = false;
         
-        if (window.audioEl.paused) {{
-            window.audioEl.volume = 0.5;
-            var playPromise = window.audioEl.play();
-            
-            if (playPromise !== undefined) {{
-                playPromise.then(function() {{
-                    window.fabIcon.innerHTML = SVG_PAUSE;
-                    window.fabBtn.classList.add("playing");
-                    window.debugStatus.innerHTML = "Playing: OK";
-                    window.debugStatus.style.color = "lime";
-                }}).catch(function(error) {{
-                    window.debugStatus.innerHTML = "Error: " + error.name + " - " + error.message;
-                    window.debugStatus.style.color = "red";
-                    alert("再生エラー: " + error.message + "\\n(ファイル形式がブラウザに対応していない可能性があります)");
-                }});
-            }}
-        }} else {{
-            window.audioEl.pause();
-            window.fabIcon.innerHTML = SVG_PLAY;
-            window.fabBtn.classList.remove("playing");
-            window.debugStatus.innerHTML = "Paused";
+        var svgPlay = `{ICON_PLAY}`;
+        var svgPause = `{ICON_PAUSE}`;
+
+        // グローバル変数で再生状態を保持（リロード対策）
+        if(window.isGlobalPlaying) {{
+            // 既に再生中なら状態を復元しない（二重再生防止のため今回はリセット）
         }}
-    }};
+
+        if(btn) {{
+            btn.onclick = function() {{
+                if (isPlaying) {{
+                    audio.pause();
+                    iconBox.innerHTML = svgPlay;
+                    btn.classList.remove("is-active");
+                    isPlaying = false;
+                    window.isGlobalPlaying = false;
+                }} else {{
+                    // ユーザーアクションによる再生開始
+                    audio.volume = 0.4;
+                    var promise = audio.play();
+                    
+                    if (promise !== undefined) {{
+                        promise.then(_ => {{
+                            iconBox.innerHTML = svgPause;
+                            btn.classList.add("is-active");
+                            isPlaying = true;
+                            window.isGlobalPlaying = true;
+                        }}).catch(error => {{
+                            alert("再生エラー: " + error);
+                        }});
+                    }}
+                }}
+            }};
+        }}
+    }})();
     </script>
     """
 
 # ==========================================
-# 🎨 CSS STYLES
+# 🎨 CSS STYLES (Reliable Animation)
 # ==========================================
 STYLES = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=SF+Pro+Display&display=swap');
 
-/* Global */
+/* --- Global --- */
 .stApp { background-color: #000; background: #050507; color: #f5f5f7; font-family: "SF Pro Display", sans-serif; overflow-x: hidden; }
 header, footer { visibility: hidden; }
 .block-container { padding-top: 4rem; padding-bottom: 10rem; max-width: 1000px; }
 
-/* Sound FAB */
-.sound-fab {
-    position: fixed; bottom: 40px; right: 40px; width: 70px; height: 70px;
-    background: rgba(30, 30, 30, 0.8); backdrop-filter: blur(15px);
-    border: 2px solid rgba(255, 255, 255, 0.2); border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer; z-index: 2147483647 !important; pointer-events: auto !important;
-    color: #fff; transition: all 0.2s ease; box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+/* --- Animation Keyframes --- */
+@keyframes floatUp { 
+    0% { opacity: 0; transform: translateY(40px); } 
+    100% { opacity: 1; transform: translateY(0); } 
 }
-.sound-fab:hover { transform: scale(1.1); background: rgba(50, 50, 50, 0.9); border-color: #fff; }
-.sound-fab:active { transform: scale(0.95); }
 @keyframes pulseGreen { 
     0% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.7); } 
     70% { box-shadow: 0 0 0 20px rgba(46, 204, 113, 0); } 
     100% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); } 
 }
-.sound-fab.playing { background: #2ecc71; border-color: #27ae60; color: #000; animation: pulseGreen 2s infinite; }
 
-/* Hero */
-@keyframes floatUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
-.hero-section { text-align: center; margin-bottom: 120px; padding: 60px 20px; animation: floatUp 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+/* --- Sound FAB --- */
+.sound-fab {
+    position: fixed; bottom: 40px; right: 40px; width: 70px; height: 70px;
+    background: rgba(30, 30, 30, 0.8); backdrop-filter: blur(15px);
+    border: 2px solid rgba(255, 255, 255, 0.2); border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; z-index: 2147483647 !important; 
+    color: #fff; transition: all 0.2s ease;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+}
+.sound-fab:hover { transform: scale(1.1); background: rgba(50, 50, 50, 0.9); border-color: #fff; }
+.sound-fab:active { transform: scale(0.95); }
+.sound-fab.is-active {
+    background: #2ecc71; border-color: #27ae60; color: #000; 
+    animation: pulseGreen 2s infinite;
+}
+
+/* --- Hero Section --- */
+.hero-section { 
+    text-align: center; margin-bottom: 120px; padding: 60px 20px; 
+    /* ページを開いたら自動で浮き上がる */
+    animation: floatUp 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
 .otp-display { font-size: 160px; font-weight: 700; letter-spacing: -6px; margin: 20px 0; background: linear-gradient(135deg, #fff 0%, #8a8a8e 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; color: #e0e0e0; }
 .otp-label { font-size: 14px; font-weight: 600; letter-spacing: 0.2em; color: #d59464; margin-bottom: 10px; }
 .progress-container { width: 240px; height: 4px; background: #333; margin: 40px auto; border-radius: 2px; overflow: hidden; }
 .progress-fill { height: 100%; background: #fff; transition: width 1s linear; }
 .warning { background: #ff453a !important; }
 
-/* Grid */
-.section-header { margin-top: 80px; margin-bottom: 60px; padding: 0 20px; opacity: 0; animation: floatUp 1s cubic-bezier(0.2, 0.8, 0.2, 1) 0.2s forwards; }
+/* --- Grid Section --- */
+.section-header { 
+    margin-top: 80px; margin-bottom: 60px; padding: 0 20px; 
+    opacity: 0; /* 初期は見えない */
+    animation: floatUp 1s cubic-bezier(0.2, 0.8, 0.2, 1) 0.3s forwards; /* 遅れて登場 */
+}
 .text-headline { font-size: 56px; font-weight: 600; margin-bottom: 20px; }
 .text-subhead { font-size: 28px; color: #86868b; }
+
 .bento-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; padding: 0 20px; }
-.bento-card { background: #101010; border-radius: 30px; padding: 40px 36px; height: 450px; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid #1d1d1f; opacity: 0; animation: floatUp 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+
+.bento-card { 
+    background: #101010; border-radius: 30px; padding: 40px 36px; height: 450px; 
+    display: flex; flex-direction: column; justify-content: space-between; 
+    border: 1px solid #1d1d1f; 
+    opacity: 0; /* 初期は見えない */
+    animation: floatUp 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
 .bento-card:hover { transform: scale(1.02); background: #151515; border-color: #333; transition: transform 0.3s ease; }
-.delay-1 { animation-delay: 0.4s; } .delay-2 { animation-delay: 0.5s; } .delay-3 { animation-delay: 0.6s; } .delay-4 { animation-delay: 0.7s; } .delay-5 { animation-delay: 0.8s; } .delay-6 { animation-delay: 0.9s; }
+
+/* Stagger Delays (カードが順番に出る) */
+.delay-1 { animation-delay: 0.4s; } .delay-2 { animation-delay: 0.5s; } .delay-3 { animation-delay: 0.6s; }
+.delay-4 { animation-delay: 0.7s; } .delay-5 { animation-delay: 0.8s; } .delay-6 { animation-delay: 0.9s; }
+
 .card-icon-box { width: 60px; height: 60px; margin-bottom: 25px; background: rgba(255,255,255,0.05); border-radius: 16px; display: flex; align-items: center; justify-content: center; }
 .card-icon-box svg { width: 32px; height: 32px; }
 .card-title { font-size: 28px; font-weight: 700; color: #f5f5f7; margin-bottom: 12px; }
@@ -169,7 +205,7 @@ def get_static_content():
     ]
     cards_html = "".join(cards)
     
-    # オーディオシステム
+    # オーディオシステム（ファイル名指定）
     audio_html = get_audio_html("bgm.mp3")
     
     return f"""
@@ -190,13 +226,6 @@ def main():
     if not TEAM_SECRET_KEY or "ARHX" not in TEAM_SECRET_KEY:
         st.error("⚠️ Secrets Error")
         return
-
-    # 診断用：Streamlit標準プレイヤー（ここで再生できるかチェック）
-    if os.path.exists("bgm.mp3"):
-        st.caption("🔊 Diagnostic Player (もし下が鳴らない場合はこちらでテスト)")
-        st.audio("bgm.mp3")
-    else:
-        st.error("🚨 'bgm.mp3' が見つかりません！ファイルをアップロードしてください。")
 
     hero_placeholder = st.empty()
     st.markdown(get_static_content(), unsafe_allow_html=True)
