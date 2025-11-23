@@ -1,7 +1,6 @@
 import streamlit as st
 import pyotp
 import time
-import base64
 
 # ==========================================
 # ⚙️ SETTINGS
@@ -12,7 +11,7 @@ except FileNotFoundError:
     TEAM_SECRET_KEY = "ARHXCWTVFU54ITHIXS4Q76SVCDFLC5TU"
 
 # ==========================================
-# 💎 SVG ICONS
+# 💎 SVG ICONS (Embedded)
 # ==========================================
 ICON_MATH = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>"""
 ICON_GRAPH = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>"""
@@ -22,7 +21,7 @@ ICON_DIMENSION = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" 
 ICON_POLISH = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>"""
 
 # ==========================================
-# 🎨 CSS & JS ENGINE
+# 🎨 CSS STYLES
 # ==========================================
 STYLES = """
 <style>
@@ -30,46 +29,36 @@ STYLES = """
 
 .stApp { background-color: #000; background: #050507; color: #f5f5f7; font-family: "SF Pro Display", sans-serif; overflow-x: hidden; }
 header, footer { visibility: hidden; }
-.block-container { padding-top: 4rem; padding-bottom: 10rem; max-width: 1000px; }
+.block-container { padding-top: 2rem; padding-bottom: 10rem; max-width: 1000px; }
 
 /* Hero Section */
-.hero-section { text-align: center; margin-bottom: 150px; padding: 60px 20px; }
+.hero-section { text-align: center; margin-bottom: 80px; padding: 60px 20px; }
 .otp-display { 
     font-size: 160px; font-weight: 700; letter-spacing: -6px; margin: 20px 0; 
     background: linear-gradient(135deg, #fff 0%, #8a8a8e 100%); 
     -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-    color: #e0e0e0; /* Fallback */
+    color: #e0e0e0;
 }
 .otp-label { font-size: 14px; font-weight: 600; letter-spacing: 0.2em; color: #d59464; margin-bottom: 10px; }
 .progress-container { width: 240px; height: 4px; background: #333; margin: 40px auto; border-radius: 2px; overflow: hidden; }
 .progress-fill { height: 100%; background: #fff; transition: width 1s linear; }
 .warning { background: #ff453a !important; }
 
-/* Bento Grid */
-.section-header { margin-top: 100px; margin-bottom: 60px; padding: 0 20px; }
+/* Grid Section */
+.section-header { margin-top: 60px; margin-bottom: 40px; padding: 0 20px; visibility: hidden; /* JSが表示させるまで隠す */ }
 .text-headline { font-size: 56px; font-weight: 600; margin-bottom: 20px; }
 .text-subhead { font-size: 28px; color: #86868b; }
 
 .bento-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; padding: 0 20px; }
 
-/* カードデザイン */
+/* Card Design */
 .bento-card { 
     background: #101010; border-radius: 30px; padding: 40px 36px; height: 450px; 
     display: flex; flex-direction: column; justify-content: space-between; 
     border: 1px solid #1d1d1f; 
-    /* デフォルトは表示（安全対策） */
-    opacity: 1; 
-    transform: translateY(0);
-    /* JSがクラスを付け外ししたときのアニメーション設定 */
-    transition: all 1.0s cubic-bezier(0.16, 1, 0.3, 1);
+    visibility: hidden; /* JSが表示させるまで隠す */
 }
-.bento-card:hover { transform: scale(1.03) !important; background: #151515; border-color: #333; transition: 0.3s ease !important; }
-
-/* JSが制御する隠しクラス */
-.scroll-hidden {
-    opacity: 0 !important;
-    transform: translateY(60px) !important;
-}
+.bento-card:hover { transform: scale(1.02); background: #151515; border-color: #333; transition: transform 0.3s ease; }
 
 .card-icon-box { width: 60px; height: 60px; margin-bottom: 25px; background: rgba(255,255,255,0.05); border-radius: 16px; display: flex; align-items: center; justify-content: center; }
 .card-icon-box svg { width: 32px; height: 32px; }
@@ -77,46 +66,16 @@ header, footer { visibility: hidden; }
 .card-desc { font-size: 17px; line-height: 1.5; color: #86868b; }
 .card-cmd { margin-top: auto; font-family: monospace; font-size: 13px; color: #fff; background: rgba(255,255,255,0.1); padding: 16px; border-radius: 16px; }
 </style>
-
-<script>
-// Streamlitのライフサイクルに対応した強力なスクロール監視
-function initScrollObserver() {
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach((entry) => {
-            if (entry.isIntersecting) {
-                // 画面に入ったら hidden クラスを外す -> ふわっと表示される
-                entry.target.classList.remove('scroll-hidden');
-            }
-        });
-    }, { threshold: 0.15 }); // 15%見えたら発火
-
-    // カードを取得して、最初は強制的に隠す
-    const cards = document.querySelectorAll('.bento-card');
-    cards.forEach((card) => {
-        // すでに表示済みでなければ隠す
-        if (!card.dataset.observed) {
-            card.classList.add('scroll-hidden');
-            card.dataset.observed = "true"; // 二重登録防止
-            observer.observe(card);
-        }
-    });
-}
-
-// タイミング調整: 少し待ってから実行（DOM生成待ち）
-setTimeout(initScrollObserver, 500);
-// Streamlitの画面更新時にも再実行
-window.addEventListener('load', initScrollObserver);
-</script>
 """
 
 # ==========================================
-# 🧱 COMPONENTS
+# 🧱 STATIC CONTENT (GRID)
 # ==========================================
 def create_card(svg_icon, title, desc, cmd):
-    # JSフック用のクラス .bento-card はそのまま
-    return f"""<div class="bento-card"><div><div class="card-icon-box">{svg_icon}</div><div class="card-title">{title}</div><div class="card-desc">{desc}</div></div><div class="card-cmd">"{cmd}"</div></div>"""
+    # JSフック用のクラス 'reveal-card' を付与
+    return f"""<div class="bento-card reveal-card"><div><div class="card-icon-box">{svg_icon}</div><div class="card-title">{title}</div><div class="card-desc">{desc}</div></div><div class="card-cmd">"{cmd}"</div></div>"""
 
-def get_static_content():
+def get_grid_html():
     cards = [
         create_card(ICON_MATH, "Math Vision", "板書の数式を、一瞬でLaTeXに。", "この画像をLaTeXにして"),
         create_card(ICON_GRAPH, "Graph Reverse", "論文のグラフから、データを復元。", "このグラフをCSVにして"),
@@ -126,30 +85,68 @@ def get_static_content():
         create_card(ICON_POLISH, "Refine", "文章を、論文のクオリティへ。", "学術的にリライトして")
     ]
     cards_html = "".join(cards)
-    return f"""<div class="section-header"><div class="text-headline">Engineering Intelligence.</div><div class="text-subhead">機械工学科のための<br>究極のサバイバルツール。</div></div><div class="bento-grid">{cards_html}</div><div style="text-align:center; padding: 100px 0; color: #444; font-size: 12px;">Designed in Yokohama.</div>"""
+    
+    # ScrollReveal.js をCDNからロードし、その場で実行するスクリプトを埋め込む
+    # これが「JSでやる」の正体です
+    js_injection = """
+    <script src="https://unpkg.com/scrollreveal"></script>
+    <script>
+        // 少し待ってから実行（DOM生成待ち）
+        setTimeout(function() {
+            ScrollReveal().reveal('.section-header', { 
+                delay: 200, distance: '50px', origin: 'bottom', duration: 1000, opacity: 0, reset: false 
+            });
+            ScrollReveal().reveal('.reveal-card', { 
+                interval: 200, distance: '50px', origin: 'bottom', duration: 1000, opacity: 0, reset: false 
+            });
+        }, 500);
+    </script>
+    """
+    
+    return f"""
+    <div class="section-header">
+        <div class="text-headline">Engineering Intelligence.</div>
+        <div class="text-subhead">機械工学科のための<br>究極のサバイバルツール。</div>
+    </div>
+    <div class="bento-grid">{cards_html}</div>
+    <div style="text-align:center; padding: 100px 0; color: #444; font-size: 12px;">Designed in Yokohama.</div>
+    {js_injection}
+    """
 
-def get_hero_content(code, progress, bar_class, remaining):
-    return f"""<div class="hero-section"><div class="otp-label">TITANIUM SECURITY</div><div class="otp-display">{code}</div><div class="progress-container"><div class="progress-fill {bar_class}" style="width: {progress}%;"></div></div><div style="color: #666; font-size: 14px; font-weight: 500;">Updating in <span style="color: #fff;">{remaining}</span>s</div></div>"""
+# ==========================================
+# 🔄 DYNAMIC CONTENT (HERO)
+# ==========================================
+def get_hero_html(code, progress, bar_class, remaining):
+    return f"""
+    <div class="hero-section">
+        <div class="otp-label">TITANIUM SECURITY</div>
+        <div class="otp-display">{code}</div>
+        <div class="progress-container"><div class="progress-fill {bar_class}" style="width: {progress}%;"></div></div>
+        <div style="color: #666; font-size: 14px; font-weight: 500;">Updating in <span style="color: #fff;">{remaining}</span>s</div>
+    </div>
+    """
 
 # ==========================================
 # 🚀 MAIN APP
 # ==========================================
 def main():
     st.set_page_config(page_title="iPhone 17 Pro Auth", page_icon="", layout="wide")
-    # JSを含むCSSを注入 (unsafe_allow_html=True必須)
     st.markdown(STYLES, unsafe_allow_html=True)
 
     if not TEAM_SECRET_KEY or "ARHX" not in TEAM_SECRET_KEY:
         st.error("⚠️ Secrets Error")
         return
 
+    # 1. レイアウト枠を作る
     hero_placeholder = st.empty()
     
-    # 静的コンテンツ（カード）を描画
-    st.markdown(get_static_content(), unsafe_allow_html=True)
+    # 2. グリッド（JSアニメーション付き）を描画
+    # これはループの外で1回だけ描画するので、JSがリセットされずに安定して動きます
+    st.markdown(get_grid_html(), unsafe_allow_html=True)
 
     try:
         totp = pyotp.TOTP(TEAM_SECRET_KEY)
+        # 3. Heroセクションだけを高速更新
         while True:
             current_code = totp.now()
             time_remaining = totp.interval - (time.time() % totp.interval)
@@ -157,9 +154,8 @@ def main():
             display_code = f"{current_code[:3]} {current_code[3:]}"
             bar_class = "warning" if time_remaining <= 5 else ""
             
-            # Heroのみ更新
             hero_placeholder.markdown(
-                get_hero_content(display_code, progress_percent, bar_class, int(time_remaining)),
+                get_hero_html(display_code, progress_percent, bar_class, int(time_remaining)),
                 unsafe_allow_html=True
             )
             time.sleep(0.1)
