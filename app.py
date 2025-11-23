@@ -211,7 +211,7 @@ def get_site_html(stress_img_tag, paper_img_tag):
             <h2 class="text-3xl md:text-4xl font-bold mb-8">さあ、エンジニアリングをアップデートしよう。</h2>
             <div class="flex flex-col md:flex-row justify-center gap-4">
                 <a href="https://chat.openai.com" target="_blank" class="bg-blue-600 text-white px-8 py-4 rounded-full font-bold text-lg hover:bg-blue-700 transition shadow-lg transform hover:scale-105 duration-200">ChatGPTを開く</a>
-                <a href="#" class="bg-white text-black border border-gray-300 px-8 py-4 rounded-full font-bold text-lg hover:bg-gray-50 transition shadow-sm">プロンプト集を見る</a>
+                <a href="https://kuriryo2005.github.io/chatgpt-f1-guide/#coding" target="_blank" class="bg-white text-black border border-gray-300 px-8 py-4 rounded-full font-bold text-lg hover:bg-gray-50 transition shadow-sm">プロンプト集を見る</a>
             </div>
             <p class="mt-8 text-xs text-gray-400">※ 生成AIの回答には誤りが含まれる可能性があります。工学的な問題解決においては、必ず教科書や信頼できる文献で裏付け（4点検算）を行ってください。</p>
         </div>
