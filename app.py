@@ -26,8 +26,18 @@ ICON_PLAY = """<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" vi
 ICON_PAUSE = """<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>"""
 
 # ==========================================
-# 🔊 AUDIO SYSTEM (Surefire Click)
+# 🔊 AUDIO SYSTEM (Diagnostic Mode)
 # ==========================================
+def get_mime_type(file_path):
+    # 拡張子から正しいMIMEタイプを判定
+    ext = os.path.splitext(file_path)[1].lower()
+    if ext == ".mp3": return "audio/mpeg"
+    elif ext == ".wav": return "audio/wav"
+    elif ext == ".ogg": return "audio/ogg"
+    elif ext == ".m4a": return "audio/mp4"
+    elif ext == ".aac": return "audio/aac"
+    return "audio/mpeg" # Default
+
 def get_audio_html(file_name):
     if not os.path.exists(file_name):
         return ""
@@ -35,41 +45,53 @@ def get_audio_html(file_name):
     with open(file_name, "rb") as f:
         b64_audio = base64.b64encode(f.read()).decode()
     
+    mime_type = get_mime_type(file_name)
+    
     return f"""
     <audio id="global-audio-player" preload="auto" loop>
-        <source src="data:audio/mp3;base64,{b64_audio}" type="audio/mp3">
+        <source src="data:{mime_type};base64,{b64_audio}" type="{mime_type}">
     </audio>
     
+    <div id="debug-status" style="position:fixed; top:10px; right:10px; color:lime; font-family:monospace; font-size:10px; z-index:999999; background:rgba(0,0,0,0.8); padding:5px; display:none;">Ready</div>
+
     <div id="fab-btn" class="sound-fab" onclick="handleFabClick()">
         <div id="fab-icon">{ICON_PLAY}</div>
     </div>
 
     <script>
-    // グローバル変数で状態管理（リロード対策）
     window.audioEl = document.getElementById("global-audio-player");
     window.fabBtn = document.getElementById("fab-btn");
     window.fabIcon = document.getElementById("fab-icon");
+    window.debugStatus = document.getElementById("debug-status");
     
-    // アイコン定数
     const SVG_PLAY = `{ICON_PLAY}`;
     const SVG_PAUSE = `{ICON_PAUSE}`;
 
-    // クリックハンドラー（シンプルに定義）
     window.handleFabClick = function() {{
+        // デバッグ表示ON
+        window.debugStatus.style.display = "block";
+        
         if (window.audioEl.paused) {{
-            // 再生試行
             window.audioEl.volume = 0.5;
-            window.audioEl.play().then(() => {{
-                window.fabIcon.innerHTML = SVG_PAUSE;
-                window.fabBtn.classList.add("playing");
-            }}).catch(e => {{
-                alert("再生できませんでした: " + e);
-            }});
+            var playPromise = window.audioEl.play();
+            
+            if (playPromise !== undefined) {{
+                playPromise.then(function() {{
+                    window.fabIcon.innerHTML = SVG_PAUSE;
+                    window.fabBtn.classList.add("playing");
+                    window.debugStatus.innerHTML = "Playing: OK";
+                    window.debugStatus.style.color = "lime";
+                }}).catch(function(error) {{
+                    window.debugStatus.innerHTML = "Error: " + error.name + " - " + error.message;
+                    window.debugStatus.style.color = "red";
+                    alert("再生エラー: " + error.message + "\\n(ファイル形式がブラウザに対応していない可能性があります)");
+                }});
+            }}
         }} else {{
-            // 停止
             window.audioEl.pause();
             window.fabIcon.innerHTML = SVG_PLAY;
             window.fabBtn.classList.remove("playing");
+            window.debugStatus.innerHTML = "Paused";
         }}
     }};
     </script>
@@ -82,52 +104,30 @@ STYLES = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=SF+Pro+Display&display=swap');
 
-/* --- Global --- */
+/* Global */
 .stApp { background-color: #000; background: #050507; color: #f5f5f7; font-family: "SF Pro Display", sans-serif; overflow-x: hidden; }
 header, footer { visibility: hidden; }
 .block-container { padding-top: 4rem; padding-bottom: 10rem; max-width: 1000px; }
 
-/* --- Sound FAB (Clickable Force) --- */
+/* Sound FAB */
 .sound-fab {
-    position: fixed; 
-    bottom: 40px; 
-    right: 40px; 
-    width: 70px; 
-    height: 70px;
-    background: rgba(30, 30, 30, 0.8); 
-    backdrop-filter: blur(15px);
-    border: 2px solid rgba(255, 255, 255, 0.2); 
-    border-radius: 50%;
-    display: flex; 
-    align-items: center; 
-    justify-content: center;
-    cursor: pointer; 
-    
-    /* 【最重要】他の要素より必ず上に来るようにする設定 */
-    z-index: 2147483647 !important; 
-    pointer-events: auto !important;
-    
-    color: #fff; 
-    transition: all 0.2s ease;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+    position: fixed; bottom: 40px; right: 40px; width: 70px; height: 70px;
+    background: rgba(30, 30, 30, 0.8); backdrop-filter: blur(15px);
+    border: 2px solid rgba(255, 255, 255, 0.2); border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; z-index: 2147483647 !important; pointer-events: auto !important;
+    color: #fff; transition: all 0.2s ease; box-shadow: 0 10px 40px rgba(0,0,0,0.6);
 }
 .sound-fab:hover { transform: scale(1.1); background: rgba(50, 50, 50, 0.9); border-color: #fff; }
 .sound-fab:active { transform: scale(0.95); }
-
-/* 再生中のアニメーション */
 @keyframes pulseGreen { 
     0% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.7); } 
     70% { box-shadow: 0 0 0 20px rgba(46, 204, 113, 0); } 
     100% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); } 
 }
-.sound-fab.playing {
-    background: #2ecc71; 
-    border-color: #27ae60; 
-    color: #000; 
-    animation: pulseGreen 2s infinite;
-}
+.sound-fab.playing { background: #2ecc71; border-color: #27ae60; color: #000; animation: pulseGreen 2s infinite; }
 
-/* --- Hero --- */
+/* Hero */
 @keyframes floatUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
 .hero-section { text-align: center; margin-bottom: 120px; padding: 60px 20px; animation: floatUp 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
 .otp-display { font-size: 160px; font-weight: 700; letter-spacing: -6px; margin: 20px 0; background: linear-gradient(135deg, #fff 0%, #8a8a8e 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; color: #e0e0e0; }
@@ -136,7 +136,7 @@ header, footer { visibility: hidden; }
 .progress-fill { height: 100%; background: #fff; transition: width 1s linear; }
 .warning { background: #ff453a !important; }
 
-/* --- Grid --- */
+/* Grid */
 .section-header { margin-top: 80px; margin-bottom: 60px; padding: 0 20px; opacity: 0; animation: floatUp 1s cubic-bezier(0.2, 0.8, 0.2, 1) 0.2s forwards; }
 .text-headline { font-size: 56px; font-weight: 600; margin-bottom: 20px; }
 .text-subhead { font-size: 28px; color: #86868b; }
@@ -190,6 +190,13 @@ def main():
     if not TEAM_SECRET_KEY or "ARHX" not in TEAM_SECRET_KEY:
         st.error("⚠️ Secrets Error")
         return
+
+    # 診断用：Streamlit標準プレイヤー（ここで再生できるかチェック）
+    if os.path.exists("bgm.mp3"):
+        st.caption("🔊 Diagnostic Player (もし下が鳴らない場合はこちらでテスト)")
+        st.audio("bgm.mp3")
+    else:
+        st.error("🚨 'bgm.mp3' が見つかりません！ファイルをアップロードしてください。")
 
     hero_placeholder = st.empty()
     st.markdown(get_static_content(), unsafe_allow_html=True)
