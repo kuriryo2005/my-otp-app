@@ -27,7 +27,7 @@ ICON_PLAY = """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" vi
 ICON_PAUSE = """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>"""
 
 # ==========================================
-# 🔊 AUDIO COMPONENT (Iframe Isolation)
+# 🔊 AUDIO COMPONENT
 # ==========================================
 def render_audio_player(file_name):
     if not os.path.exists(file_name):
@@ -48,7 +48,7 @@ def render_audio_player(file_name):
             border-radius: 50%;
             background: rgba(40, 40, 40, 0.9);
             backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.15);
             color: white; cursor: pointer;
             transition: all 0.3s ease;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
@@ -64,6 +64,7 @@ def render_audio_player(file_name):
             70% {{ box-shadow: 0 0 0 15px rgba(46, 204, 113, 0); }} 
             100% {{ box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); }} 
         }}
+        svg {{ width: 24px; height: 24px; }}
     </style>
     </head>
     <body>
@@ -102,7 +103,7 @@ def render_audio_player(file_name):
     components.html(html_code, height=80)
 
 # ==========================================
-# 🎨 MAIN CSS
+# 🎨 MAIN CSS (Timing Tuned)
 # ==========================================
 STYLES = """
 <style>
@@ -110,37 +111,69 @@ STYLES = """
 
 .stApp { background-color: #000; background: #050507; color: #f5f5f7; font-family: "SF Pro Display", sans-serif; overflow-x: hidden; }
 header, footer { visibility: hidden; }
-.block-container { padding-top: 3rem; padding-bottom: 10rem; max-width: 1000px; }
+.block-container { padding-top: 2rem; padding-bottom: 10rem; max-width: 1000px; }
 
-/* iframe固定（右下） */
+/* iframe固定 */
 iframe[title="streamlit.components.v1.html"] {
     position: fixed !important;
-    bottom: 40px !important;
-    right: 40px !important;
+    bottom: 20px !important;
+    right: 20px !important;
     width: 100px !important;
     height: 100px !important;
     z-index: 2147483647 !important;
     border: none !important;
 }
 
-/* Hero */
-@keyframes floatUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
-.hero-section { text-align: center; margin-bottom: 80px; padding: 40px 20px; animation: floatUp 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+/* アニメーション定義 */
+@keyframes floatUp { 
+    from { opacity: 0; transform: translateY(40px); } 
+    to { opacity: 1; transform: translateY(0); } 
+}
+
+/* --- Grid (Tips) Settings --- */
+.section-header { 
+    margin-top: 40px; margin-bottom: 40px; padding: 0 20px; 
+    opacity: 0; /* 最初は隠す */
+    /* 0.2秒後に開始 */
+    animation: floatUp 1s cubic-bezier(0.2, 0.8, 0.2, 1) 0.2s forwards; 
+}
+.text-headline { font-size: 56px; font-weight: 600; margin-bottom: 20px; }
+.text-subhead { font-size: 28px; color: #86868b; }
+
+.bento-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; padding: 0 20px; }
+.bento-card { 
+    background: #101010; border-radius: 30px; padding: 40px 36px; height: 450px; 
+    display: flex; flex-direction: column; justify-content: space-between; 
+    border: 1px solid #1d1d1f; 
+    opacity: 0; /* 最初は隠す */
+    /* カード個別の出現アニメーション */
+    animation: floatUp 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; 
+}
+/* カードごとの時間差 */
+.delay-1 { animation-delay: 0.2s; } 
+.delay-2 { animation-delay: 0.3s; } 
+.delay-3 { animation-delay: 0.4s; } 
+.delay-4 { animation-delay: 0.5s; } 
+.delay-5 { animation-delay: 0.6s; } 
+.delay-6 { animation-delay: 0.7s; }
+
+.bento-card:hover { transform: scale(1.02); background: #151515; border-color: #333; transition: transform 0.3s ease; }
+
+/* --- Hero (OTP) Settings --- */
+.hero-section { 
+    text-align: center; 
+    margin-top: 100px; margin-bottom: 80px; padding: 40px 20px; 
+    opacity: 0; /* 最初は隠す */
+    /* 【重要】1.0秒待ってから開始（Tipsの後に出るように調整） */
+    animation: floatUp 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) 1.0s forwards; 
+}
 .otp-display { font-size: 160px; font-weight: 700; letter-spacing: -6px; margin: 20px 0; background: linear-gradient(135deg, #fff 0%, #8a8a8e 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; color: #e0e0e0; }
 .otp-label { font-size: 14px; font-weight: 600; letter-spacing: 0.2em; color: #d59464; margin-bottom: 10px; }
 .progress-container { width: 240px; height: 4px; background: #333; margin: 40px auto; border-radius: 2px; overflow: hidden; }
 .progress-fill { height: 100%; background: #fff; transition: width 1s linear; }
 .warning { background: #ff453a !important; }
 
-/* Grid */
-.section-header { margin-top: 60px; margin-bottom: 40px; padding: 0 20px; opacity: 0; animation: floatUp 1s cubic-bezier(0.2, 0.8, 0.2, 1) 0.3s forwards; }
-.text-headline { font-size: 56px; font-weight: 600; margin-bottom: 20px; }
-.text-subhead { font-size: 28px; color: #86868b; }
-.bento-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; padding: 0 20px; }
-.bento-card { background: #101010; border-radius: 30px; padding: 40px 36px; height: 450px; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid #1d1d1f; opacity: 0; animation: floatUp 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
-.bento-card:hover { transform: scale(1.02); background: #151515; border-color: #333; transition: transform 0.3s ease; }
-.delay-1 { animation-delay: 0.4s; } .delay-2 { animation-delay: 0.5s; } .delay-3 { animation-delay: 0.6s; } .delay-4 { animation-delay: 0.7s; } .delay-5 { animation-delay: 0.8s; } .delay-6 { animation-delay: 0.9s; }
-
+/* Cards Internal Styles */
 .card-icon-box { width: 60px; height: 60px; margin-bottom: 25px; background: rgba(255,255,255,0.05); border-radius: 16px; display: flex; align-items: center; justify-content: center; }
 .card-icon-box svg { width: 32px; height: 32px; }
 .card-title { font-size: 28px; font-weight: 700; color: #f5f5f7; margin-bottom: 12px; }
@@ -150,7 +183,7 @@ iframe[title="streamlit.components.v1.html"] {
 """
 
 # ==========================================
-# 🧱 COMPONENTS
+# 🧱 CONTENT
 # ==========================================
 def create_card(svg_icon, title, desc, cmd, delay_class):
     return f"""<div class="bento-card {delay_class}"><div><div class="card-icon-box">{svg_icon}</div><div class="card-title">{title}</div><div class="card-desc">{desc}</div></div><div class="card-cmd">"{cmd}"</div></div>"""
@@ -165,7 +198,7 @@ def get_grid_html():
         create_card(ICON_POLISH, "Refine", "文章を、論文のクオリティへ。", "学術的にリライトして", "delay-6")
     ]
     cards_html = "".join(cards)
-    return f"""<div class="section-header"><div class="text-headline">Engineering Intelligence.</div><div class="text-subhead">機械工学科のための<br>究極のサバイバルツール。</div></div><div class="bento-grid">{cards_html}</div><div style="text-align:center; padding: 100px 0; color: #444; font-size: 12px;">Designed in Yokohama.</div>"""
+    return f"""<div class="section-header"><div class="text-headline">Engineering Intelligence.</div><div class="text-subhead">機械工学科のための<br>究極のサバイバルツール。</div></div><div class="bento-grid">{cards_html}</div>"""
 
 def get_hero_content(code, progress, bar_class, remaining):
     return f"""<div class="hero-section"><div class="otp-label">TITANIUM SECURITY</div><div class="otp-display">{code}</div><div class="progress-container"><div class="progress-fill {bar_class}" style="width: {progress}%;"></div></div><div style="color: #666; font-size: 14px; font-weight: 500;">Updating in <span style="color: #fff;">{remaining}</span>s</div></div>"""
@@ -181,14 +214,14 @@ def main():
         st.error("⚠️ Secrets Error")
         return
 
-    # 1. 音楽プレイヤー (一番最初に配置！)
+    # 1. 音楽プレイヤー (右下固定)
     render_audio_player("bgm.mp3")
 
-    # 2. OTP表示エリア（ここにパスコードが出ます）
-    hero_placeholder = st.empty()
-    
-    # 3. 静的グリッド（Tips）
+    # 2. 静的グリッド（Tips）を先に表示
     st.markdown(get_grid_html(), unsafe_allow_html=True)
+
+    # 3. OTP表示エリア（下に配置）
+    hero_placeholder = st.empty()
 
     try:
         totp = pyotp.TOTP(TEAM_SECRET_KEY)
@@ -199,6 +232,7 @@ def main():
             display_code = f"{current_code[:3]} {current_code[3:]}"
             bar_class = "warning" if time_remaining <= 5 else ""
             
+            # Heroは 1.0s の遅延を持って表示される
             hero_placeholder.markdown(
                 get_hero_content(display_code, progress_percent, bar_class, int(time_remaining)),
                 unsafe_allow_html=True
