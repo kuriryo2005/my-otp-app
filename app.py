@@ -14,7 +14,7 @@ except:
     TEAM_SECRET_KEY = "ARHXCWTVFU54ITHIXS4Q76SVCDFLC5TU"
 
 # ==========================================
-# 💎 SVG ICONS (Content)
+# 💎 SVG ICONS
 # ==========================================
 ICON_MATH = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>"""
 ICON_GRAPH = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>"""
@@ -27,7 +27,7 @@ ICON_PLAY = """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" vi
 ICON_PAUSE = """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>"""
 
 # ==========================================
-# 🔊 AUDIO COMPONENT (The "Simple" Way)
+# 🔊 AUDIO COMPONENT
 # ==========================================
 def render_audio_player(file_name):
     if not os.path.exists(file_name):
@@ -36,27 +36,32 @@ def render_audio_player(file_name):
     with open(file_name, "rb") as f:
         b64_audio = base64.b64encode(f.read()).decode()
 
-    # v30と同じ「Iframe隔離方式」でボタンを作成
-    # 内部にCSSを持つため、デザインも崩れません
     html_code = f"""
     <!DOCTYPE html>
     <html>
     <head>
     <style>
-        body {{ margin: 0; padding: 0; background: transparent; overflow: hidden; display: flex; justify-content: center; }}
+        /* iframe内の配置（右寄せ） */
+        body {{ 
+            margin: 0; padding: 0; background: transparent; 
+            display: flex; justify-content: flex-end; align-items: center; 
+            height: 80px; overflow: hidden;
+        }}
         
-        /* iPhone Pro Style Button */
+        /* ボタンデザイン */
         .audio-btn {{
             display: flex; align-items: center; justify-content: center;
             width: 60px; height: 60px;
             border-radius: 50%;
-            background: rgba(40, 40, 40, 0.9);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(40, 40, 40, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
             color: white; cursor: pointer;
             transition: all 0.3s ease;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            margin-right: 10px; /* 端からの余白 */
         }}
-        .audio-btn:hover {{ transform: scale(1.1); background: rgba(60, 60, 60, 1); }}
+        .audio-btn:hover {{ transform: scale(1.1); background: rgba(60, 60, 60, 0.9); }}
         .audio-btn.playing {{
             background: #2ecc71; border-color: #2ecc71; color: #000;
             animation: pulse 2s infinite;
@@ -66,18 +71,15 @@ def render_audio_player(file_name):
             70% {{ box-shadow: 0 0 0 15px rgba(46, 204, 113, 0); }} 
             100% {{ box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); }} 
         }}
-        svg {{ width: 24px; height: 24px; }}
     </style>
     </head>
     <body>
         <audio id="player" loop>
             <source src="data:audio/mp3;base64,{b64_audio}" type="audio/mp3">
         </audio>
-        
         <div id="btn" class="audio-btn" onclick="toggle()">
             {ICON_PLAY}
         </div>
-
         <script>
             var audio = document.getElementById("player");
             var btn = document.getElementById("btn");
@@ -104,11 +106,10 @@ def render_audio_player(file_name):
     </body>
     </html>
     """
-    # コンポーネントとしてレンダリング（高さ80px分確保）
     components.html(html_code, height=80)
 
 # ==========================================
-# 🎨 MAIN CSS
+# 🎨 MAIN CSS (Layout & Floating Fix)
 # ==========================================
 STYLES = """
 <style>
@@ -118,7 +119,18 @@ STYLES = """
 header, footer { visibility: hidden; }
 .block-container { padding-top: 3rem; padding-bottom: 10rem; max-width: 1000px; }
 
-/* Hero */
+/* --- 魔法のCSS: 音楽プレイヤーのiframeだけを右下に固定する --- */
+iframe[title="streamlit.components.v1.html"] {
+    position: fixed !important;
+    bottom: 20px !important;
+    right: 20px !important;
+    width: 100px !important;
+    height: 100px !important;
+    z-index: 999999 !important;
+    border: none !important;
+}
+
+/* Hero & Grid Styles */
 @keyframes floatUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
 .hero-section { text-align: center; margin-bottom: 80px; padding: 40px 20px; animation: floatUp 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
 .otp-display { font-size: 160px; font-weight: 700; letter-spacing: -6px; margin: 20px 0; background: linear-gradient(135deg, #fff 0%, #8a8a8e 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; color: #e0e0e0; }
@@ -127,7 +139,6 @@ header, footer { visibility: hidden; }
 .progress-fill { height: 100%; background: #fff; transition: width 1s linear; }
 .warning { background: #ff453a !important; }
 
-/* Grid */
 .section-header { margin-top: 60px; margin-bottom: 40px; padding: 0 20px; opacity: 0; animation: floatUp 1s cubic-bezier(0.2, 0.8, 0.2, 1) 0.3s forwards; }
 .text-headline { font-size: 56px; font-weight: 600; margin-bottom: 20px; }
 .text-subhead { font-size: 28px; color: #86868b; }
@@ -176,14 +187,11 @@ def main():
         st.error("⚠️ Secrets Error")
         return
 
-    # 1. 音楽プレイヤー (ループ外に配置・コンポーネント化)
-    # これで音楽は別世界で生き続けるので、下のループで画面が更新されても止まりません
+    # 1. 音楽プレイヤーを配置 (CSSで強制的に右下固定)
     render_audio_player("bgm.mp3")
 
-    # 2. コンテンツエリア
+    # 2. メインコンテンツ
     hero_placeholder = st.empty()
-    
-    # 3. 静的グリッド (一度だけ描画)
     st.markdown(get_grid_html(), unsafe_allow_html=True)
 
     try:
