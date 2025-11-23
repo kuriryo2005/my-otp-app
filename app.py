@@ -3,6 +3,8 @@ import pyotp
 import time
 import base64
 import os
+import io
+from PIL import Image  # 画像処理ライブラリを追加
 import streamlit.components.v1 as components
 
 # ==========================================
@@ -20,22 +22,35 @@ st.set_page_config(
 )
 
 # ==========================================
-# 🖼️ IMAGE HELPER (Base64 Encoder)
+# 🖼️ IMAGE HELPER (With Resize & Compression)
 # ==========================================
-def get_img_tag(file_path, class_name=""):
-    """ローカル画像をBase64エンコードしてHTMLのimgタグを返す関数"""
+def get_img_tag(file_path, class_name="", max_width=800):
+    """
+    ローカル画像を読み込み、リサイズしてからBase64エンコードしてHTMLタグを返す。
+    MemoryErrorを防ぐため、max_widthを超える画像は縮小します。
+    """
     if not os.path.exists(file_path):
-        # ファイルがない場合はプレースホルダーを表示
-        return f'<div class="{class_name} bg-gray-700 flex items-center justify-center text-gray-500">Image not found: {file_path}</div>'
+        return f'<div class="{class_name} bg-gray-200 flex items-center justify-center text-gray-500 h-64">Image not found: {file_path}</div>'
     
-    with open(file_path, "rb") as f:
-        data = base64.b64encode(f.read()).decode()
-    
-    # 拡張子に応じたMIMEタイプ判定
-    ext = file_path.split('.')[-1].lower()
-    mime = "webp" if ext == "webp" else "png"
-    
-    return f'<img src="data:image/{mime};base64,{data}" class="{class_name}" alt="Embedded Image">'
+    try:
+        # 画像を開く
+        img = Image.open(file_path)
+        
+        # 画像が大きすぎる場合はリサイズ (アスペクト比維持)
+        if img.width > max_width:
+            ratio = max_width / img.width
+            new_height = int(img.height * ratio)
+            img = img.resize((max_width, new_height))
+        
+        # バッファに書き込む (PNG形式で統一)
+        buffered = io.BytesIO()
+        img.save(buffered, format="PNG", optimize=True)
+        data = base64.b64encode(buffered.getvalue()).decode()
+        
+        return f'<img src="data:image/png;base64,{data}" class="{class_name}" alt="Embedded Image">'
+        
+    except Exception as e:
+        return f'<div class="{class_name} bg-red-100 text-red-500 p-4">Error loading image: {e}</div>'
 
 # ==========================================
 # 🔊 AUDIO COMPONENT (Top Right)
@@ -118,7 +133,6 @@ def render_audio_player(file_name):
 # ==========================================
 # 🎨 MAIN SITE HTML (Template)
 # ==========================================
-# 画像を挿入する場所をプレースホルダー () にしています
 MAIN_SITE_HTML = """
 <!DOCTYPE html>
 <html lang="ja">
@@ -140,7 +154,6 @@ MAIN_SITE_HTML = """
             padding: 0;
         }
         
-        /* スクロールアニメーション */
         .reveal {
             opacity: 0;
             transform: translateY(50px);
@@ -438,16 +451,18 @@ def main():
 
     # 2. メインWebサイトを表示（画像を注入）
     
-    # 応力ひずみ線図の画像タグ生成
+    # 応力ひずみ線図の画像タグ生成 (max_widthを指定してリサイズ)
     stress_img_tag = get_img_tag(
         "simwiki-stress-strain-shape-evolution.png.webp", 
-        class_name="w-full h-auto object-cover opacity-90 hover:opacity-100 transition duration-300"
+        class_name="w-full h-auto object-cover opacity-90 hover:opacity-100 transition duration-300",
+        max_width=800
     )
     
-    # 論文サマリー画像の画像タグ生成
+    # 論文サマリー画像の画像タグ生成 (max_widthを指定してリサイズ)
     paper_img_tag = get_img_tag(
         "papersumary.png", 
-        class_name="mt-4 rounded-xl shadow-lg transform rotate-2 translate-y-4 hover:translate-y-2 transition duration-500 w-full object-cover border border-gray-100"
+        class_name="mt-4 rounded-xl shadow-lg transform rotate-2 translate-y-4 hover:translate-y-2 transition duration-500 w-full object-cover border border-gray-100",
+        max_width=800
     )
 
     # HTML内のプレースホルダーを置換
