@@ -4,7 +4,7 @@ import time
 import base64
 import os
 import io
-from PIL import Image  # 画像処理ライブラリを追加
+from PIL import Image
 import streamlit.components.v1 as components
 
 # ==========================================
@@ -22,38 +22,36 @@ st.set_page_config(
 )
 
 # ==========================================
-# 🖼️ IMAGE HELPER (With Resize & Compression)
+# 🖼️ IMAGE HELPER (Memory Safe)
 # ==========================================
-def get_img_tag(file_path, class_name="", max_width=800):
+def get_img_tag(file_path, class_name="", max_width=600):
     """
-    ローカル画像を読み込み、リサイズしてからBase64エンコードしてHTMLタグを返す。
-    MemoryErrorを防ぐため、max_widthを超える画像は縮小します。
+    画像を読み込み、HTMLタグを返す。
+    メモリ不足を防ぐため、PILでリサイズしてからBase64化する。
     """
     if not os.path.exists(file_path):
-        return f'<div class="{class_name} bg-gray-200 flex items-center justify-center text-gray-500 h-64">Image not found: {file_path}</div>'
+        # 画像がない場合のプレースホルダー（レイアウトを崩さない高さ設定）
+        return f'<div class="{class_name} bg-gray-200 flex items-center justify-center text-gray-500" style="min-height: 200px;">Image not found</div>'
     
     try:
-        # 画像を開く
         img = Image.open(file_path)
-        
-        # 画像が大きすぎる場合はリサイズ (アスペクト比維持)
+        # リサイズ処理 (アスペクト比維持)
         if img.width > max_width:
             ratio = max_width / img.width
             new_height = int(img.height * ratio)
             img = img.resize((max_width, new_height))
         
-        # バッファに書き込む (PNG形式で統一)
         buffered = io.BytesIO()
         img.save(buffered, format="PNG", optimize=True)
         data = base64.b64encode(buffered.getvalue()).decode()
-        
         return f'<img src="data:image/png;base64,{data}" class="{class_name}" alt="Embedded Image">'
         
-    except Exception as e:
-        return f'<div class="{class_name} bg-red-100 text-red-500 p-4">Error loading image: {e}</div>'
+    except Exception:
+        # エラー時は空のdivを返す
+        return f'<div class="{class_name} bg-red-50">Image Error</div>'
 
 # ==========================================
-# 🔊 AUDIO COMPONENT (Top Right)
+# 🔊 AUDIO COMPONENT
 # ==========================================
 def render_audio_player(file_name):
     b64_audio = ""
@@ -87,42 +85,22 @@ def render_audio_player(file_name):
             background: #007aff; border-color: #007aff; color: #fff;
             animation: pulse 2s infinite;
         }}
-        @keyframes pulse {{ 
-            0% {{ box-shadow: 0 0 0 0 rgba(0, 122, 255, 0.4); }} 
-            70% {{ box-shadow: 0 0 0 10px rgba(0, 122, 255, 0); }} 
-            100% {{ box-shadow: 0 0 0 0 rgba(0, 122, 255, 0); }} 
-        }}
+        @keyframes pulse {{ 0% {{ box-shadow: 0 0 0 0 rgba(0, 122, 255, 0.4); }} 70% {{ box-shadow: 0 0 0 10px rgba(0, 122, 255, 0); }} 100% {{ box-shadow: 0 0 0 0 rgba(0, 122, 255, 0); }} }}
         svg {{ width: 18px; height: 18px; }}
     </style>
     </head>
     <body>
-        <audio id="player" loop>
-            <source src="data:audio/mp3;base64,{b64_audio}" type="audio/mp3">
-        </audio>
-        <div id="btn" class="audio-btn" onclick="toggle()">
-            {ICON_PLAY}
-        </div>
+        <audio id="player" loop><source src="data:audio/mp3;base64,{b64_audio}" type="audio/mp3"></audio>
+        <div id="btn" class="audio-btn" onclick="toggle()">{ICON_PLAY}</div>
         <script>
             var audio = document.getElementById("player");
             var btn = document.getElementById("btn");
             var isPlaying = false;
             var svgPlay = `{ICON_PLAY}`;
             var svgPause = `{ICON_PAUSE}`;
-
             function toggle() {{
-                if (isPlaying) {{
-                    audio.pause();
-                    btn.innerHTML = svgPlay;
-                    btn.classList.remove("playing");
-                    isPlaying = false;
-                }} else {{
-                    audio.volume = 0.4;
-                    audio.play().then(() => {{
-                        btn.innerHTML = svgPause;
-                        btn.classList.add("playing");
-                        isPlaying = true;
-                    }}).catch(e => console.log(e));
-                }}
+                if (isPlaying) {{ audio.pause(); btn.innerHTML = svgPlay; btn.classList.remove("playing"); isPlaying = false; }}
+                else {{ audio.volume = 0.4; audio.play().then(() => {{ btn.innerHTML = svgPause; btn.classList.add("playing"); isPlaying = true; }}).catch(e => console.log(e)); }}
             }}
         </script>
     </body>
@@ -131,9 +109,14 @@ def render_audio_player(file_name):
     components.html(html_code, height=80)
 
 # ==========================================
-# 🎨 MAIN SITE HTML (Template)
+# 🎨 HTML GENERATOR (Full Content via f-string)
 # ==========================================
-MAIN_SITE_HTML = """
+def get_site_html(stress_img_tag, paper_img_tag):
+    # ここにご指定のHTML内容をすべて入れ込みます。
+    # f-string (f""") を使うことで、{stress_img_tag} の部分に直接画像を埋め込みます。
+    # これにより .replace() を使う必要がなくなり、MemoryErrorを回避できます。
+    
+    return f"""
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -145,42 +128,43 @@ MAIN_SITE_HTML = """
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
-        body {
+        body {{
             font-family: 'Noto Sans JP', sans-serif;
             background-color: #f5f5f7; /* Apple Light Grey */
             color: #1d1d1f;
             overflow-x: hidden;
             margin: 0;
             padding: 0;
-        }
+        }}
         
-        .reveal {
+        /* スクロールアニメーション */
+        .reveal {{
             opacity: 0;
             transform: translateY(50px);
             transition: all 1s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        .reveal.active {
+        }}
+        .reveal.active {{
             opacity: 1;
             transform: translateY(0);
-        }
+        }}
 
-        .scale-reveal {
+        .scale-reveal {{
             opacity: 0;
             transform: scale(0.95);
             transition: all 1s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        .scale-reveal.active {
+        }}
+        .scale-reveal.active {{
             opacity: 1;
             transform: scale(1);
-        }
+        }}
 
-        .text-gradient {
+        .text-gradient {{
             background: linear-gradient(90deg, #007aff, #a855f7);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-        }
+        }}
 
-        section { box-sizing: border-box; }
+        section {{ box-sizing: border-box; }}
     </style>
 </head>
 <body>
@@ -245,7 +229,8 @@ MAIN_SITE_HTML = """
                         <p>import pandas as pd<br>import matplotlib.pyplot as plt<br>...</p>
                         
                         <div class="mt-4 bg-white rounded border border-gray-700 overflow-hidden">
-                            </div>
+                            {stress_img_tag}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -269,7 +254,8 @@ MAIN_SITE_HTML = """
                     </div>
                     <div class="absolute bottom-[-50px] right-[-50px] w-80 h-80 bg-blue-100 rounded-full blur-3xl opacity-50"></div>
                     
-                    </div>
+                    {paper_img_tag}
+                </div>
 
                 <div class="bg-white rounded-3xl p-8 shadow-sm hover:shadow-xl transition duration-500 scale-reveal flex flex-col justify-center items-center text-center">
                     <div class="text-5xl mb-4">🔬</div>
@@ -344,23 +330,23 @@ MAIN_SITE_HTML = """
     </section>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const observerOptions = {
+        document.addEventListener('DOMContentLoaded', () => {{
+            const observerOptions = {{
                 threshold: 0.1,
                 rootMargin: "0px 0px -50px 0px"
-            };
+            }};
 
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
+            const observer = new IntersectionObserver((entries) => {{
+                entries.forEach(entry => {{
+                    if (entry.isIntersecting) {{
                         entry.target.classList.add('active');
-                    }
-                });
-            }, observerOptions);
+                    }}
+                }});
+            }}, observerOptions);
 
             const revealElements = document.querySelectorAll('.reveal, .scale-reveal');
             revealElements.forEach(el => observer.observe(el));
-        });
+        }});
     </script>
 </body>
 </html>
@@ -428,7 +414,7 @@ def get_otp_html(code, progress, bar_class, remaining):
 # 🚀 MAIN APP EXECUTION
 # ==========================================
 def main():
-    # CSS調整 (Streamlitのデフォルト余白削除 & 音楽プレーヤー固定)
+    # CSS Adjustments
     st.markdown("""
     <style>
         iframe[title="streamlit.components.v1.html"] {
@@ -446,35 +432,31 @@ def main():
     </style>
     """, unsafe_allow_html=True)
 
-    # 1. 音楽プレーヤー (bgm.mp3) - 右上に配置
+    # 1. Audio Player
     render_audio_player("bgm.mp3")
 
-    # 2. メインWebサイトを表示（画像を注入）
-    
-    # 応力ひずみ線図の画像タグ生成 (max_widthを指定してリサイズ)
+    # 2. Images (Safe Load)
+    # max_widthを600pxに抑えることでBase64文字列のサイズを劇的に減らします
     stress_img_tag = get_img_tag(
         "simwiki-stress-strain-shape-evolution.png.webp", 
         class_name="w-full h-auto object-cover opacity-90 hover:opacity-100 transition duration-300",
-        max_width=800
+        max_width=600
     )
     
-    # 論文サマリー画像の画像タグ生成 (max_widthを指定してリサイズ)
     paper_img_tag = get_img_tag(
         "papersumary.png", 
         class_name="mt-4 rounded-xl shadow-lg transform rotate-2 translate-y-4 hover:translate-y-2 transition duration-500 w-full object-cover border border-gray-100",
-        max_width=800
+        max_width=600
     )
 
-    # HTML内のプレースホルダーを置換
-    final_html = MAIN_SITE_HTML.replace(
-        "", stress_img_tag
-    ).replace(
-        "", paper_img_tag
-    )
-
+    # 3. HTML Generation (Using f-string instead of replace to save memory)
+    # ここでHTML文字列を構築します
+    final_html = get_site_html(stress_img_tag, paper_img_tag)
+    
+    # Render
     components.html(final_html, height=3500, scrolling=True)
 
-    # 3. OTP (最下部で更新)
+    # 4. OTP Loop
     otp_placeholder = st.empty()
 
     try:
@@ -487,7 +469,6 @@ def main():
             display_code = f"{current_code[:3]} {current_code[3:]}"
             bar_class = "warning" if time_remaining <= 5 else ""
             
-            # プレースホルダーを更新
             otp_placeholder.markdown(
                 get_otp_html(display_code, progress_percent, bar_class, int(time_remaining)),
                 unsafe_allow_html=True
