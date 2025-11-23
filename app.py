@@ -30,7 +30,6 @@ def get_img_tag(file_path, class_name="", max_width=600):
     メモリ不足を防ぐため、PILでリサイズしてからBase64化する。
     """
     if not os.path.exists(file_path):
-        # 画像がない場合のプレースホルダー（レイアウトを崩さない高さ設定）
         return f'<div class="{class_name} bg-gray-200 flex items-center justify-center text-gray-500" style="min-height: 200px;">Image not found</div>'
     
     try:
@@ -47,11 +46,10 @@ def get_img_tag(file_path, class_name="", max_width=600):
         return f'<img src="data:image/png;base64,{data}" class="{class_name}" alt="Embedded Image">'
         
     except Exception:
-        # エラー時は空のdivを返す
         return f'<div class="{class_name} bg-red-50">Image Error</div>'
 
 # ==========================================
-# 🔊 AUDIO COMPONENT
+# 🔊 AUDIO COMPONENT (Bottom Right)
 # ==========================================
 def render_audio_player(file_name):
     b64_audio = ""
@@ -67,26 +65,31 @@ def render_audio_player(file_name):
     <html>
     <head>
     <style>
-        body {{ margin: 0; padding: 0; background: transparent; overflow: hidden; display: flex; justify-content: flex-end; align-items: center; height: 80px; }}
+        /* コンテナ自体のスタイル: 右下に配置しやすいよう調整 */
+        body {{ margin: 0; padding: 0; background: transparent; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 80px; width: 80px; }}
+        
         .audio-btn {{
             display: flex; align-items: center; justify-content: center;
-            width: 44px; height: 44px;
+            width: 56px; height: 56px; /* 少し大きめに */
             border-radius: 50%;
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(0, 0, 0, 0.1);
+            background: rgba(255, 255, 255, 0.8); /* ガラス感 */
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
             color: #333; cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            margin-right: 20px;
+            transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15); /* 浮遊感を強調 */
         }}
-        .audio-btn:hover {{ transform: scale(1.05); background: #fff; }}
+        .audio-btn:hover {{ 
+            transform: translateY(-4px) scale(1.05); /* ホバーで少し浮く */
+            background: #ffffff;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+        }}
         .audio-btn.playing {{
             background: #007aff; border-color: #007aff; color: #fff;
             animation: pulse 2s infinite;
         }}
-        @keyframes pulse {{ 0% {{ box-shadow: 0 0 0 0 rgba(0, 122, 255, 0.4); }} 70% {{ box-shadow: 0 0 0 10px rgba(0, 122, 255, 0); }} 100% {{ box-shadow: 0 0 0 0 rgba(0, 122, 255, 0); }} }}
-        svg {{ width: 18px; height: 18px; }}
+        @keyframes pulse {{ 0% {{ box-shadow: 0 0 0 0 rgba(0, 122, 255, 0.6); }} 70% {{ box-shadow: 0 0 0 16px rgba(0, 122, 255, 0); }} 100% {{ box-shadow: 0 0 0 0 rgba(0, 122, 255, 0); }} }}
+        svg {{ width: 24px; height: 24px; }}
     </style>
     </head>
     <body>
@@ -112,10 +115,6 @@ def render_audio_player(file_name):
 # 🎨 HTML GENERATOR (Full Content via f-string)
 # ==========================================
 def get_site_html(stress_img_tag, paper_img_tag):
-    # ここにご指定のHTML内容をすべて入れ込みます。
-    # f-string (f""") を使うことで、{stress_img_tag} の部分に直接画像を埋め込みます。
-    # これにより .replace() を使う必要がなくなり、MemoryErrorを回避できます。
-    
     return f"""
 <!DOCTYPE html>
 <html lang="ja">
@@ -130,40 +129,17 @@ def get_site_html(stress_img_tag, paper_img_tag):
     <style>
         body {{
             font-family: 'Noto Sans JP', sans-serif;
-            background-color: #f5f5f7; /* Apple Light Grey */
+            background-color: #f5f5f7;
             color: #1d1d1f;
             overflow-x: hidden;
             margin: 0;
             padding: 0;
         }}
-        
-        /* スクロールアニメーション */
-        .reveal {{
-            opacity: 0;
-            transform: translateY(50px);
-            transition: all 1s cubic-bezier(0.16, 1, 0.3, 1);
-        }}
-        .reveal.active {{
-            opacity: 1;
-            transform: translateY(0);
-        }}
-
-        .scale-reveal {{
-            opacity: 0;
-            transform: scale(0.95);
-            transition: all 1s cubic-bezier(0.16, 1, 0.3, 1);
-        }}
-        .scale-reveal.active {{
-            opacity: 1;
-            transform: scale(1);
-        }}
-
-        .text-gradient {{
-            background: linear-gradient(90deg, #007aff, #a855f7);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }}
-
+        .reveal {{ opacity: 0; transform: translateY(50px); transition: all 1s cubic-bezier(0.16, 1, 0.3, 1); }}
+        .reveal.active {{ opacity: 1; transform: translateY(0); }}
+        .scale-reveal {{ opacity: 0; transform: scale(0.95); transition: all 1s cubic-bezier(0.16, 1, 0.3, 1); }}
+        .scale-reveal.active {{ opacity: 1; transform: scale(1); }}
+        .text-gradient {{ background: linear-gradient(90deg, #007aff, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }}
         section {{ box-sizing: border-box; }}
     </style>
 </head>
@@ -414,12 +390,12 @@ def get_otp_html(code, progress, bar_class, remaining):
 # 🚀 MAIN APP EXECUTION
 # ==========================================
 def main():
-    # CSS Adjustments
+    # CSS Adjustments: 音楽プレイヤーを右下(bottom: 20px, right: 20px)に固定
     st.markdown("""
     <style>
         iframe[title="streamlit.components.v1.html"] {
             position: fixed !important;
-            top: 20px !important;
+            bottom: 20px !important;
             right: 20px !important;
             width: 80px !important;
             height: 80px !important;
@@ -432,11 +408,10 @@ def main():
     </style>
     """, unsafe_allow_html=True)
 
-    # 1. Audio Player
+    # 1. Audio Player (bgm.mp3)
     render_audio_player("bgm.mp3")
 
-    # 2. Images (Safe Load)
-    # max_widthを600pxに抑えることでBase64文字列のサイズを劇的に減らします
+    # 2. Images (Resize & Encode)
     stress_img_tag = get_img_tag(
         "simwiki-stress-strain-shape-evolution.png.webp", 
         class_name="w-full h-auto object-cover opacity-90 hover:opacity-100 transition duration-300",
@@ -449,11 +424,10 @@ def main():
         max_width=600
     )
 
-    # 3. HTML Generation (Using f-string instead of replace to save memory)
-    # ここでHTML文字列を構築します
+    # 3. HTML Construction (using f-string to prevent MemoryError)
     final_html = get_site_html(stress_img_tag, paper_img_tag)
     
-    # Render
+    # Render Main Site
     components.html(final_html, height=3500, scrolling=True)
 
     # 4. OTP Loop
