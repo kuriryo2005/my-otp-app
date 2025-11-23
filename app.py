@@ -26,57 +26,68 @@ ICON_PLAY = """<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" vi
 ICON_PAUSE = """<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>"""
 
 # ==========================================
-# 🔊 AUDIO ENGINE (Base64 Embedding)
+# 🔊 ROBUST AUDIO SYSTEM (Window Persistence)
 # ==========================================
 def get_audio_html(file_name):
     if not os.path.exists(file_name):
         return ""
     
-    # ファイルをバイナリとして読み込んでBase64化
     with open(file_name, "rb") as f:
         b64_audio = base64.b64encode(f.read()).decode()
     
     return f"""
-    <audio id="bgm-player" loop>
-        <source src="data:audio/mpeg;base64,{b64_audio}" type="audio/mpeg">
-    </audio>
-    
-    <div id="fab-btn" class="sound-fab">
+    <div id="fab-btn" class="sound-fab" onclick="toggleGlobalMusic()">
         <div id="fab-icon">{ICON_PLAY}</div>
     </div>
 
     <script>
-    // Streamlitの再描画に強いイベントリスナー設定
-    (function() {{
-        var audio = document.getElementById("bgm-player");
-        var btn = document.getElementById("fab-btn");
-        var iconBox = document.getElementById("fab-icon");
-        var isPlaying = false;
-        
-        var svgPlay = `{ICON_PLAY}`;
-        var svgPause = `{ICON_PAUSE}`;
+    // 1. 音楽プレイヤーを「ウインドウ（Global）」に常駐させる
+    // これにより、Streamlitが画面を書き換えても音楽は死なない
+    if (!window.bgmAudio) {{
+        window.bgmAudio = new Audio("data:audio/mp3;base64,{b64_audio}");
+        window.bgmAudio.loop = true;
+        window.bgmAudio.volume = 0.4;
+        window.isBgmPlaying = false;
+        console.log("Audio Initialized");
+    }}
 
-        if(btn) {{
-            btn.addEventListener("click", function() {{
-                if (isPlaying) {{
-                    audio.pause();
-                    iconBox.innerHTML = svgPlay;
-                    btn.classList.remove("is-active");
-                    isPlaying = false;
-                }} else {{
-                    audio.volume = 0.4;
-                    audio.play().then(() => {{
-                        iconBox.innerHTML = svgPause;
-                        btn.classList.add("is-active");
-                        isPlaying = true;
-                    }}).catch(e => {{
-                        // エラーが出たら理由を表示
-                        alert("再生エラー: " + e.message);
-                    }});
-                }}
+    // 2. アイコン定数
+    const SVG_PLAY = `{ICON_PLAY}`;
+    const SVG_PAUSE = `{ICON_PAUSE}`;
+
+    // 3. 再生トグル関数（グローバル関数として定義）
+    window.toggleGlobalMusic = function() {{
+        const btn = document.getElementById("fab-btn");
+        const iconBox = document.getElementById("fab-icon");
+
+        if (window.isBgmPlaying) {{
+            window.bgmAudio.pause();
+            window.isBgmPlaying = false;
+            // UI更新
+            if(iconBox) iconBox.innerHTML = SVG_PLAY;
+            if(btn) btn.classList.remove("is-active");
+        }} else {{
+            window.bgmAudio.play().then(() => {{
+                window.isBgmPlaying = true;
+                // UI更新
+                if(iconBox) iconBox.innerHTML = SVG_PAUSE;
+                if(btn) btn.classList.add("is-active");
+            }}).catch(e => {{
+                alert("再生エラー: " + e);
             }});
         }}
-    }})();
+    }};
+
+    // 4. 状態復元（リロード対策）
+    // 画面が再描画されたとき、再生中ならボタンの状態を「再生中」に戻す
+    setTimeout(() => {{
+        const btn = document.getElementById("fab-btn");
+        const iconBox = document.getElementById("fab-icon");
+        if (window.isBgmPlaying && btn && iconBox) {{
+            btn.classList.add("is-active");
+            iconBox.innerHTML = SVG_PAUSE;
+        }}
+    }}, 100);
     </script>
     """
 
@@ -92,11 +103,8 @@ STYLES = """
 header, footer { visibility: hidden; }
 .block-container { padding-top: 4rem; padding-bottom: 10rem; max-width: 1000px; }
 
-/* Animations */
-@keyframes floatUp { 
-    0% { opacity: 0; transform: translateY(40px); } 
-    100% { opacity: 1; transform: translateY(0); } 
-}
+/* Animation Keyframes */
+@keyframes floatUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes pulseGreen { 
     0% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.7); } 
     70% { box-shadow: 0 0 0 15px rgba(46, 204, 113, 0); } 
@@ -112,6 +120,8 @@ header, footer { visibility: hidden; }
     cursor: pointer; z-index: 2147483647; color: #fff; 
     box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    /* 確実にクリックできるようにする */
+    pointer-events: auto !important;
 }
 .sound-fab:hover { transform: scale(1.1); background: rgba(60, 60, 60, 0.9); }
 .sound-fab.is-active {
@@ -119,7 +129,7 @@ header, footer { visibility: hidden; }
     animation: pulseGreen 2s infinite;
 }
 
-/* Hero */
+/* Hero Section */
 .hero-section { 
     text-align: center; margin-bottom: 120px; padding: 60px 20px; 
     animation: floatUp 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
@@ -135,7 +145,7 @@ header, footer { visibility: hidden; }
 .progress-fill { height: 100%; background: #fff; transition: width 1s linear; }
 .warning { background: #ff453a !important; }
 
-/* Grid */
+/* Grid Section */
 .section-header { margin-top: 80px; margin-bottom: 60px; padding: 0 20px; opacity: 0; animation: floatUp 1s cubic-bezier(0.2, 0.8, 0.2, 1) 0.3s forwards; }
 .text-headline { font-size: 56px; font-weight: 600; margin-bottom: 20px; }
 .text-subhead { font-size: 28px; color: #86868b; }
@@ -143,8 +153,8 @@ header, footer { visibility: hidden; }
 .bento-card { 
     background: #101010; border-radius: 30px; padding: 40px 36px; height: 450px; 
     display: flex; flex-direction: column; justify-content: space-between; 
-    border: 1px solid #1d1d1f; opacity: 0; 
-    animation: floatUp 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    border: 1px solid #1d1d1f; 
+    opacity: 0; animation: floatUp 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 .bento-card:hover { transform: scale(1.02); background: #151515; border-color: #333; transition: transform 0.3s ease; }
 .delay-1 { animation-delay: 0.4s; } .delay-2 { animation-delay: 0.5s; } .delay-3 { animation-delay: 0.6s; }
