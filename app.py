@@ -20,6 +20,24 @@ st.set_page_config(
 )
 
 # ==========================================
+# 🖼️ IMAGE HELPER (Base64 Encoder)
+# ==========================================
+def get_img_tag(file_path, class_name=""):
+    """ローカル画像をBase64エンコードしてHTMLのimgタグを返す関数"""
+    if not os.path.exists(file_path):
+        # ファイルがない場合はプレースホルダーを表示
+        return f'<div class="{class_name} bg-gray-700 flex items-center justify-center text-gray-500">Image not found: {file_path}</div>'
+    
+    with open(file_path, "rb") as f:
+        data = base64.b64encode(f.read()).decode()
+    
+    # 拡張子に応じたMIMEタイプ判定
+    ext = file_path.split('.')[-1].lower()
+    mime = "webp" if ext == "webp" else "png"
+    
+    return f'<img src="data:image/{mime};base64,{data}" class="{class_name}" alt="Embedded Image">'
+
+# ==========================================
 # 🔊 AUDIO COMPONENT (Top Right)
 # ==========================================
 def render_audio_player(file_name):
@@ -39,7 +57,7 @@ def render_audio_player(file_name):
         body {{ margin: 0; padding: 0; background: transparent; overflow: hidden; display: flex; justify-content: flex-end; align-items: center; height: 80px; }}
         .audio-btn {{
             display: flex; align-items: center; justify-content: center;
-            width: 40px; height: 40px;
+            width: 44px; height: 44px;
             border-radius: 50%;
             background: rgba(255, 255, 255, 0.9);
             backdrop-filter: blur(10px);
@@ -59,7 +77,7 @@ def render_audio_player(file_name):
             70% {{ box-shadow: 0 0 0 10px rgba(0, 122, 255, 0); }} 
             100% {{ box-shadow: 0 0 0 0 rgba(0, 122, 255, 0); }} 
         }}
-        svg {{ width: 16px; height: 16px; }}
+        svg {{ width: 18px; height: 18px; }}
     </style>
     </head>
     <body>
@@ -98,8 +116,9 @@ def render_audio_player(file_name):
     components.html(html_code, height=80)
 
 # ==========================================
-# 🎨 MAIN SITE HTML (Provided by User)
+# 🎨 MAIN SITE HTML (Template)
 # ==========================================
+# 画像を挿入する場所をプレースホルダー () にしています
 MAIN_SITE_HTML = """
 <!DOCTYPE html>
 <html lang="ja">
@@ -121,13 +140,12 @@ MAIN_SITE_HTML = """
             padding: 0;
         }
         
-        /* スクロールアニメーション用のクラス */
+        /* スクロールアニメーション */
         .reveal {
             opacity: 0;
             transform: translateY(50px);
             transition: all 1s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        
         .reveal.active {
             opacity: 1;
             transform: translateY(0);
@@ -138,23 +156,18 @@ MAIN_SITE_HTML = """
             transform: scale(0.95);
             transition: all 1s cubic-bezier(0.16, 1, 0.3, 1);
         }
-
         .scale-reveal.active {
             opacity: 1;
             transform: scale(1);
         }
 
-        /* グラデーションテキスト */
         .text-gradient {
             background: linear-gradient(90deg, #007aff, #a855f7);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
-        /* Streamlitのiframe内での表示調整 */
-        section {
-            box-sizing: border-box;
-        }
+        section { box-sizing: border-box; }
     </style>
 </head>
 <body>
@@ -217,9 +230,9 @@ MAIN_SITE_HTML = """
                         <p class="mb-4">応力-ひずみ線図を作成し、ヤング率を求めて。</p>
                         <p class="text-blue-400"># ChatGPT Output</p>
                         <p>import pandas as pd<br>import matplotlib.pyplot as plt<br>...</p>
-                        <div class="mt-4 h-32 bg-gray-800 rounded border border-gray-700 flex items-center justify-center text-gray-500">
-                            [Graph Output Area]
-                        </div>
+                        
+                        <div class="mt-4 bg-white rounded border border-gray-700 overflow-hidden">
+                            </div>
                     </div>
                 </div>
             </div>
@@ -242,10 +255,8 @@ MAIN_SITE_HTML = """
                         </p>
                     </div>
                     <div class="absolute bottom-[-50px] right-[-50px] w-80 h-80 bg-blue-100 rounded-full blur-3xl opacity-50"></div>
-                    <div style="background-color: #f3f4f6; color: #a1a1aa; height: 200px; width: 100%; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-top: 40px; transform: rotate(2deg);">
-                        Paper Summary PDF
+                    
                     </div>
-                </div>
 
                 <div class="bg-white rounded-3xl p-8 shadow-sm hover:shadow-xl transition duration-500 scale-reveal flex flex-col justify-center items-center text-center">
                     <div class="text-5xl mb-4">🔬</div>
@@ -346,7 +357,6 @@ MAIN_SITE_HTML = """
 # 🔐 OTP HTML GENERATOR (Bottom)
 # ==========================================
 def get_otp_html(code, progress, bar_class, remaining):
-    # デザインをサイトのトーン（ライトモード）に合わせて調整
     return f"""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@700&display=swap');
@@ -355,9 +365,9 @@ def get_otp_html(code, progress, bar_class, remaining):
             padding: 60px 20px 80px 20px;
             background: #ffffff;
             border-top: 1px solid #e5e5e5;
+            font-family: 'SF Pro Display', sans-serif;
         }}
         .otp-display {{
-            font-family: 'SF Pro Display', sans-serif;
             font-size: 100px;
             font-weight: 700;
             letter-spacing: -4px;
@@ -405,15 +415,15 @@ def get_otp_html(code, progress, bar_class, remaining):
 # 🚀 MAIN APP EXECUTION
 # ==========================================
 def main():
-    # 1. CSS調整 (Streamlitのデフォルト余白削除 & 音楽プレーヤー固定)
+    # CSS調整 (Streamlitのデフォルト余白削除 & 音楽プレーヤー固定)
     st.markdown("""
     <style>
         iframe[title="streamlit.components.v1.html"] {
             position: fixed !important;
-            top: 15px !important;
+            top: 20px !important;
             right: 20px !important;
-            width: 100px !important;
-            height: 100px !important;
+            width: 80px !important;
+            height: 80px !important;
             z-index: 9999 !important;
             border: none !important;
         }
@@ -423,14 +433,33 @@ def main():
     </style>
     """, unsafe_allow_html=True)
 
-    # 2. 音楽プレーヤー (bgm.mp3) - 右上に配置
+    # 1. 音楽プレーヤー (bgm.mp3) - 右上に配置
     render_audio_player("bgm.mp3")
 
-    # 3. メインWebサイト
-    # heightはコンテンツの長さに応じて調整
-    components.html(MAIN_SITE_HTML, height=3500, scrolling=True)
+    # 2. メインWebサイトを表示（画像を注入）
+    
+    # 応力ひずみ線図の画像タグ生成
+    stress_img_tag = get_img_tag(
+        "simwiki-stress-strain-shape-evolution.png.webp", 
+        class_name="w-full h-auto object-cover opacity-90 hover:opacity-100 transition duration-300"
+    )
+    
+    # 論文サマリー画像の画像タグ生成
+    paper_img_tag = get_img_tag(
+        "papersumary.png", 
+        class_name="mt-4 rounded-xl shadow-lg transform rotate-2 translate-y-4 hover:translate-y-2 transition duration-500 w-full object-cover border border-gray-100"
+    )
 
-    # 4. OTP (最下部で更新)
+    # HTML内のプレースホルダーを置換
+    final_html = MAIN_SITE_HTML.replace(
+        "", stress_img_tag
+    ).replace(
+        "", paper_img_tag
+    )
+
+    components.html(final_html, height=3500, scrolling=True)
+
+    # 3. OTP (最下部で更新)
     otp_placeholder = st.empty()
 
     try:
@@ -443,6 +472,7 @@ def main():
             display_code = f"{current_code[:3]} {current_code[3:]}"
             bar_class = "warning" if time_remaining <= 5 else ""
             
+            # プレースホルダーを更新
             otp_placeholder.markdown(
                 get_otp_html(display_code, progress_percent, bar_class, int(time_remaining)),
                 unsafe_allow_html=True
