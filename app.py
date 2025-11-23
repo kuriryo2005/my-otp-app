@@ -27,7 +27,7 @@ ICON_PLAY = """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" vi
 ICON_PAUSE = """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>"""
 
 # ==========================================
-# 🔊 AUDIO COMPONENT
+# 🔊 AUDIO COMPONENT (Iframe Isolation)
 # ==========================================
 def render_audio_player(file_name):
     if not os.path.exists(file_name):
@@ -41,27 +41,20 @@ def render_audio_player(file_name):
     <html>
     <head>
     <style>
-        /* iframe内の配置（右寄せ） */
-        body {{ 
-            margin: 0; padding: 0; background: transparent; 
-            display: flex; justify-content: flex-end; align-items: center; 
-            height: 80px; overflow: hidden;
-        }}
-        
-        /* ボタンデザイン */
+        body {{ margin: 0; padding: 0; background: transparent; overflow: hidden; display: flex; justify-content: flex-end; align-items: center; height: 80px; }}
         .audio-btn {{
             display: flex; align-items: center; justify-content: center;
             width: 60px; height: 60px;
             border-radius: 50%;
-            background: rgba(40, 40, 40, 0.8);
+            background: rgba(40, 40, 40, 0.9);
             backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             color: white; cursor: pointer;
             transition: all 0.3s ease;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            margin-right: 10px; /* 端からの余白 */
+            margin-right: 10px;
         }}
-        .audio-btn:hover {{ transform: scale(1.1); background: rgba(60, 60, 60, 0.9); }}
+        .audio-btn:hover {{ transform: scale(1.1); background: rgba(60, 60, 60, 1); }}
         .audio-btn.playing {{
             background: #2ecc71; border-color: #2ecc71; color: #000;
             animation: pulse 2s infinite;
@@ -109,7 +102,7 @@ def render_audio_player(file_name):
     components.html(html_code, height=80)
 
 # ==========================================
-# 🎨 MAIN CSS (Layout & Floating Fix)
+# 🎨 MAIN CSS
 # ==========================================
 STYLES = """
 <style>
@@ -119,18 +112,18 @@ STYLES = """
 header, footer { visibility: hidden; }
 .block-container { padding-top: 3rem; padding-bottom: 10rem; max-width: 1000px; }
 
-/* --- 魔法のCSS: 音楽プレイヤーのiframeだけを右下に固定する --- */
+/* iframe固定（右下） */
 iframe[title="streamlit.components.v1.html"] {
     position: fixed !important;
-    bottom: 20px !important;
-    right: 20px !important;
+    bottom: 40px !important;
+    right: 40px !important;
     width: 100px !important;
     height: 100px !important;
-    z-index: 999999 !important;
+    z-index: 2147483647 !important;
     border: none !important;
 }
 
-/* Hero & Grid Styles */
+/* Hero */
 @keyframes floatUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
 .hero-section { text-align: center; margin-bottom: 80px; padding: 40px 20px; animation: floatUp 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
 .otp-display { font-size: 160px; font-weight: 700; letter-spacing: -6px; margin: 20px 0; background: linear-gradient(135deg, #fff 0%, #8a8a8e 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; color: #e0e0e0; }
@@ -139,6 +132,7 @@ iframe[title="streamlit.components.v1.html"] {
 .progress-fill { height: 100%; background: #fff; transition: width 1s linear; }
 .warning { background: #ff453a !important; }
 
+/* Grid */
 .section-header { margin-top: 60px; margin-bottom: 40px; padding: 0 20px; opacity: 0; animation: floatUp 1s cubic-bezier(0.2, 0.8, 0.2, 1) 0.3s forwards; }
 .text-headline { font-size: 56px; font-weight: 600; margin-bottom: 20px; }
 .text-subhead { font-size: 28px; color: #86868b; }
@@ -156,7 +150,7 @@ iframe[title="streamlit.components.v1.html"] {
 """
 
 # ==========================================
-# 🧱 CONTENT
+# 🧱 COMPONENTS
 # ==========================================
 def create_card(svg_icon, title, desc, cmd, delay_class):
     return f"""<div class="bento-card {delay_class}"><div><div class="card-icon-box">{svg_icon}</div><div class="card-title">{title}</div><div class="card-desc">{desc}</div></div><div class="card-cmd">"{cmd}"</div></div>"""
@@ -168,49 +162,4 @@ def get_grid_html():
         create_card(ICON_CODE, "Polyglot", "MATLABを、Pythonへ。", "Pythonに書き換えて", "delay-3"),
         create_card(ICON_ERROR, "Error Analysis", "誤差伝播を、自動計算。", "誤差伝播を計算して", "delay-4"),
         create_card(ICON_DIMENSION, "Dimensions", "物理式の整合性を、検算。", "次元解析をして", "delay-5"),
-        create_card(ICON_POLISH, "Refine", "文章を、論文のクオリティへ。", "学術的にリライトして", "delay-6")
-    ]
-    cards_html = "".join(cards)
-    return f"""<div class="section-header"><div class="text-headline">Engineering Intelligence.</div><div class="text-subhead">機械工学科のための<br>究極のサバイバルツール。</div></div><div class="bento-grid">{cards_html}</div><div style="text-align:center; padding: 100px 0; color: #444; font-size: 12px;">Designed in Yokohama.</div>"""
-
-def get_hero_content(code, progress, bar_class, remaining):
-    return f"""<div class="hero-section"><div class="otp-label">TITANIUM SECURITY</div><div class="otp-display">{code}</div><div class="progress-container"><div class="progress-fill {bar_class}" style="width: {progress}%;"></div></div><div style="color: #666; font-size: 14px; font-weight: 500;">Updating in <span style="color: #fff;">{remaining}</span>s</div></div>"""
-
-# ==========================================
-# 🚀 MAIN APP
-# ==========================================
-def main():
-    st.set_page_config(page_title="iPhone 17 Pro Auth", page_icon="", layout="wide")
-    st.markdown(STYLES, unsafe_allow_html=True)
-
-    if not TEAM_SECRET_KEY or "ARHX" not in TEAM_SECRET_KEY:
-        st.error("⚠️ Secrets Error")
-        return
-
-    # 1. 音楽プレイヤーを配置 (CSSで強制的に右下固定)
-    render_audio_player("bgm.mp3")
-
-    # 2. メインコンテンツ
-    hero_placeholder = st.empty()
-    st.markdown(get_grid_html(), unsafe_allow_html=True)
-
-    try:
-        totp = pyotp.TOTP(TEAM_SECRET_KEY)
-        while True:
-            current_code = totp.now()
-            time_remaining = totp.interval - (time.time() % totp.interval)
-            progress_percent = (time_remaining / 30.0) * 100
-            display_code = f"{current_code[:3]} {current_code[3:]}"
-            bar_class = "warning" if time_remaining <= 5 else ""
-            
-            hero_placeholder.markdown(
-                get_hero_content(display_code, progress_percent, bar_class, int(time_remaining)),
-                unsafe_allow_html=True
-            )
-            time.sleep(0.1)
-
-    except Exception as e:
-        st.error(f"Error: {e}")
-
-if __name__ == "__main__":
-    main()
+        create_card(ICON_POLISH, "Refine", "文章を、論文のク
