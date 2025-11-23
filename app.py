@@ -1,6 +1,8 @@
 import streamlit as st
 import pyotp
 import time
+import base64
+import os
 
 # ==========================================
 # ⚙️ SETTINGS
@@ -20,8 +22,72 @@ ICON_ERROR = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill
 ICON_DIMENSION = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>"""
 ICON_POLISH = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>"""
 
+ICON_PLAY = """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>"""
+ICON_PAUSE = """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>"""
+
 # ==========================================
-# 🎨 CSS STYLES (Simple & Safe)
+# 🔊 ROBUST AUDIO ENGINE (Global Scope)
+# ==========================================
+def get_audio_html(file_name):
+    if not os.path.exists(file_name):
+        return ""
+    
+    with open(file_name, "rb") as f:
+        b64_audio = base64.b64encode(f.read()).decode()
+    
+    # Pythonの変数をJSに渡すためのID
+    return f"""
+    <div id="global-sound-btn" class="sound-fab" onclick="window.toggleGlobalAudio()">
+        <div id="global-icon-box">{ICON_PLAY}</div>
+    </div>
+
+    <script>
+    // 1. グローバル領域にオーディオが存在しなければ作成（これが永続化のキモ）
+    if (!window.globalAudio) {{
+        window.globalAudio = new Audio("data:audio/mp3;base64,{b64_audio}");
+        window.globalAudio.loop = true;
+        window.globalAudio.volume = 0.5;
+        window.isAudioPlaying = false;
+    }}
+
+    // 2. アイコン定数の定義
+    const SVG_PLAY = `{ICON_PLAY}`;
+    const SVG_PAUSE = `{ICON_PAUSE}`;
+
+    // 3. 再生トグル関数（グローバル登録）
+    window.toggleGlobalAudio = function() {{
+        const btn = document.getElementById("global-sound-btn");
+        const iconBox = document.getElementById("global-icon-box");
+
+        if (window.isAudioPlaying) {{
+            window.globalAudio.pause();
+            iconBox.innerHTML = SVG_PLAY;
+            if(btn) btn.classList.remove("is-active");
+            window.isAudioPlaying = false;
+        }} else {{
+            window.globalAudio.play().then(() => {{
+                iconBox.innerHTML = SVG_PAUSE;
+                if(btn) btn.classList.add("is-active");
+                window.isAudioPlaying = true;
+            }}).catch(e => console.error("Audio Error:", e));
+        }}
+    }};
+
+    // 4. 画面更新時の状態復元（リロード対策）
+    // Pythonが画面を書き換えても、JSの状態を見てボタンの見た目を戻す
+    setTimeout(() => {{
+        const btn = document.getElementById("global-sound-btn");
+        const iconBox = document.getElementById("global-icon-box");
+        if (window.isAudioPlaying && btn && iconBox) {{
+            btn.classList.add("is-active");
+            iconBox.innerHTML = SVG_PAUSE;
+        }}
+    }}, 100);
+    </script>
+    """
+
+# ==========================================
+# 🎨 CSS STYLES
 # ==========================================
 STYLES = """
 <style>
@@ -30,6 +96,19 @@ STYLES = """
 .stApp { background-color: #000; background: #050507; color: #f5f5f7; font-family: "SF Pro Display", sans-serif; overflow-x: hidden; }
 header, footer { visibility: hidden; }
 .block-container { padding-top: 4rem; padding-bottom: 10rem; max-width: 1000px; }
+
+/* Sound FAB */
+.sound-fab {
+    position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px;
+    background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; z-index: 999999; color: #fff; transition: all 0.3s ease;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+.sound-fab:hover { transform: scale(1.1); background: rgba(255, 255, 255, 0.3); }
+@keyframes pulseGreen { 0% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(46, 204, 113, 0); } 100% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); } }
+.sound-fab.is-active { background: #2ecc71; border-color: #2ecc71; color: #000; animation: pulseGreen 2s infinite; }
 
 /* Hero */
 .hero-section { text-align: center; margin-bottom: 100px; padding: 60px 20px; }
@@ -46,7 +125,6 @@ header, footer { visibility: hidden; }
 .bento-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; padding: 0 20px; }
 .bento-card { background: #101010; border-radius: 30px; padding: 40px 36px; height: 450px; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid #1d1d1f; }
 .bento-card:hover { transform: scale(1.02); background: #151515; border-color: #333; transition: transform 0.3s ease; }
-
 .card-icon-box { width: 60px; height: 60px; margin-bottom: 25px; background: rgba(255,255,255,0.05); border-radius: 16px; display: flex; align-items: center; justify-content: center; }
 .card-icon-box svg { width: 32px; height: 32px; }
 .card-title { font-size: 28px; font-weight: 700; color: #f5f5f7; margin-bottom: 12px; }
@@ -71,7 +149,14 @@ def get_static_content():
         create_card(ICON_POLISH, "Refine", "文章を、論文のクオリティへ。", "学術的にリライトして")
     ]
     cards_html = "".join(cards)
-    return f"""<div class="section-header"><div class="text-headline">Engineering Intelligence.</div><div class="text-subhead">機械工学科のための<br>究極のサバイバルツール。</div></div><div class="bento-grid">{cards_html}</div><div style="text-align:center; padding: 100px 0; color: #444; font-size: 12px;">Designed in Yokohama.</div>"""
+    
+    # 音声プレーヤーの読み込み
+    audio_player = get_audio_html("bgm.mp3")
+    
+    return f"""
+    {audio_player}
+    <div class="section-header"><div class="text-headline">Engineering Intelligence.</div><div class="text-subhead">機械工学科のための<br>究極のサバイバルツール。</div></div><div class="bento-grid">{cards_html}</div><div style="text-align:center; padding: 100px 0; color: #444; font-size: 12px;">Designed in Yokohama.</div>
+    """
 
 def get_hero_content(code, progress, bar_class, remaining):
     return f"""<div class="hero-section"><div class="otp-label">TITANIUM SECURITY</div><div class="otp-display">{code}</div><div class="progress-container"><div class="progress-fill {bar_class}" style="width: {progress}%;"></div></div><div style="color: #666; font-size: 14px; font-weight: 500;">Updating in <span style="color: #fff;">{remaining}</span>s</div></div>"""
@@ -82,6 +167,10 @@ def get_hero_content(code, progress, bar_class, remaining):
 def main():
     st.set_page_config(page_title="iPhone 17 Pro Auth", page_icon="", layout="wide")
     st.markdown(STYLES, unsafe_allow_html=True)
+
+    if not TEAM_SECRET_KEY or "ARHX" not in TEAM_SECRET_KEY:
+        st.error("⚠️ Secrets Error")
+        return
 
     hero_placeholder = st.empty()
     st.markdown(get_static_content(), unsafe_allow_html=True)
